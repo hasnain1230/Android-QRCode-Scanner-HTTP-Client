@@ -1,5 +1,6 @@
 package com.jscj.qrcodescanner
 
+import android.graphics.Rect
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
@@ -42,6 +42,7 @@ import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.Result
+import com.google.zxing.ResultPoint
 import com.google.zxing.common.HybridBinarizer
 import com.jscj.qrcodescanner.ui.theme.JSCJQRCodeScannerTheme
 import pub.devrel.easypermissions.AppSettingsDialog
@@ -101,11 +102,12 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
 @Composable
 fun CameraPreview() {
     val context = LocalContext.current
-    val scanner = MultiFormatReader().apply { //
+    val scanner = MultiFormatReader().apply {
         val hints: MutableMap<DecodeHintType, Any> = EnumMap(DecodeHintType::class.java)
         hints[DecodeHintType.POSSIBLE_FORMATS] = listOf(BarcodeFormat.QR_CODE)
         setHints(hints)
     }
+
     val qrCodeBounds = remember { mutableStateOf<Rect?>(null) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -128,16 +130,9 @@ fun CameraPreview() {
                                 val result = scanQRCode(imageProxy, scanner)
                                 imageProxy.close()
                                 if (result != null) {
-                                    qrCodeBounds.value = result.resultPoints?.let { points ->
-                                        Rect(
-                                            left = points[0].x,
-                                            top = points[0].y,
-                                            right = points[2].x,
-                                            bottom = points[2].y
-                                        )
-                                    }
-
                                     println("QR Code found: ${result.text}")
+                                    println("Image Proxy Width: ${imageProxy.width}, Height: ${imageProxy.height}")
+                                    qrCodeBounds.value = getBoundingBox(result.resultPoints, imageProxy.width, imageProxy.height, previewView.width, previewView.height)
                                 } else {
                                     qrCodeBounds.value = null
                                 }
@@ -161,19 +156,6 @@ fun CameraPreview() {
             modifier = Modifier.fillMaxSize()
         )
 
-        if (qrCodeBounds.value != null) {
-            Canvas(modifier = Modifier.matchParentSize()) {
-                qrCodeBounds.value?.let { bounds ->
-                    drawRect(
-                        color = Color.Red,
-                        topLeft = Offset(bounds.left, bounds.top),
-                        size = Size(bounds.width, bounds.height),
-                        style = Stroke(width = 3.dp.toPx()) // Adjust the stroke width as needed
-                    )
-                }
-            }
-        }
-
         Box(modifier = Modifier
             .matchParentSize()
             .background(Color.Black.copy(alpha = 0.8f))
@@ -196,23 +178,37 @@ fun CameraPreview() {
                 }
                 .border(2.dp, MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(12.dp))
         )
-    }
-}
 
-@Composable
-fun DrawRedBox(qrCodeBounds: Rect?) {
-    if (qrCodeBounds != null) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRect(
-                color = Color.Red,
-                topLeft = Offset(qrCodeBounds.left, qrCodeBounds.top),
-                size = Size(qrCodeBounds.width, qrCodeBounds.height),
-                style = Stroke(width = 2.dp.toPx())
-            )
+        qrCodeBounds.value?.let { bounds ->
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(
+                    color = Color.Red,
+                    topLeft = Offset(bounds.left.toFloat(), bounds.top.toFloat()),
+                    size = Size(bounds.width().toFloat(), bounds.height().toFloat()),
+                    style = Stroke(width = 3.dp.toPx())
+                )
+            }
         }
     }
 }
 
+private fun getBoundingBox(resultPoints: Array<ResultPoint>?, imageWidth: Int, imageHeight: Int, previewWidth: Int, previewHeight: Int): Rect? {
+    if (resultPoints == null || resultPoints.size != 4) {
+        return null
+    }
+
+    // Calculate scale factors
+    val scaleX = previewWidth.toFloat() / imageWidth
+    val scaleY = previewHeight.toFloat() / imageHeight
+
+    // Apply scale factors to the coordinates
+    val left = (resultPoints[0].x * scaleX).toInt()
+    val top = (resultPoints[0].y * scaleY).toInt()
+    val right = (resultPoints[2].x * scaleX).toInt()
+    val bottom = (resultPoints[2].y * scaleY).toInt()
+
+    return Rect(left, top, right, bottom)
+}
 
 
 private fun scanQRCode(imageProxy: ImageProxy, scanner: MultiFormatReader): Result? {
