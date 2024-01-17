@@ -128,7 +128,18 @@ fun CameraPreview() {
                                 val result = scanQRCode(imageProxy, scanner)
                                 imageProxy.close()
                                 if (result != null) {
+                                    qrCodeBounds.value = result.resultPoints?.let { points ->
+                                        Rect(
+                                            left = points[0].x,
+                                            top = points[0].y,
+                                            right = points[2].x,
+                                            bottom = points[2].y
+                                        )
+                                    }
+
                                     println("QR Code found: ${result.text}")
+                                } else {
+                                    qrCodeBounds.value = null
                                 }
                             }
                         }
@@ -149,6 +160,19 @@ fun CameraPreview() {
             },
             modifier = Modifier.fillMaxSize()
         )
+
+        if (qrCodeBounds.value != null) {
+            Canvas(modifier = Modifier.matchParentSize()) {
+                qrCodeBounds.value?.let { bounds ->
+                    drawRect(
+                        color = Color.Red,
+                        topLeft = Offset(bounds.left, bounds.top),
+                        size = Size(bounds.width, bounds.height),
+                        style = Stroke(width = 3.dp.toPx()) // Adjust the stroke width as needed
+                    )
+                }
+            }
+        }
 
         Box(modifier = Modifier
             .matchParentSize()
