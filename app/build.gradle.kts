@@ -50,6 +50,7 @@ android {
 }
 
 dependencies {
+    implementation("com.google.mlkit:vision-common:17.3.0")
     val cameraxVersion = "1.3.1"
     val zebraCrossingVersion = "4.3.0"
     val easyPermissionsVersion = "3.0.0"

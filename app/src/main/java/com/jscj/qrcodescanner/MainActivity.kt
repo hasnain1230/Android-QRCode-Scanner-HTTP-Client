@@ -1,9 +1,16 @@
 package com.jscj.qrcodescanner
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Bundle
+import android.util.Patterns
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.camera.core.CameraControl
+import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -16,13 +23,27 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.twotone.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -33,6 +54,12 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -87,8 +114,9 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
         }
     }
 
+
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
-        // Do nothing.
+        Toast.makeText(this, "Camera permission granted", Toast.LENGTH_SHORT).show()
     }
 
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
@@ -108,7 +136,12 @@ fun CameraPreview() {
         setHints(hints)
     }
 
+    // Check if flash is on or off
+    val isFlashOn = remember { mutableStateOf(false) }
+    val cameraControl = remember { mutableStateOf<CameraControl?>(null) }
+    val cameraInfo = remember { mutableStateOf<CameraInfo?>(null) }
     val qrCodeBounds = remember { mutableStateOf<Rect?>(null) }
+    val qrCodeData = remember { mutableStateOf<String?>(null) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidth = maxWidth
@@ -129,24 +162,29 @@ fun CameraPreview() {
                             it.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
                                 val result = scanQRCode(imageProxy, scanner)
                                 imageProxy.close()
+
                                 if (result != null) {
-                                    println("QR Code found: ${result.text}")
-                                    println("Image Proxy Width: ${imageProxy.width}, Height: ${imageProxy.height}")
-                                    qrCodeBounds.value = getBoundingBox(result.resultPoints, imageProxy.width, imageProxy.height, previewView.width, previewView.height)
+                                    // Display a popup with the scanned QR data
+                                    qrCodeData.value = result.text
+                                    qrCodeBounds.value = getBoundingBox(result.resultPoints, imageProxy, previewView)
                                 } else {
                                     qrCodeBounds.value = null
                                 }
                             }
                         }
 
+                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
                     try {
                         cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(
+                        val camera = cameraProvider.bindToLifecycle(
                             context as ComponentActivity,
-                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            cameraSelector,
                             preview,
                             imageAnalysis
                         )
+                        cameraControl.value = camera.cameraControl
+                        cameraInfo.value = camera.cameraInfo
                     } catch (exc: Exception) {
                         // Handle exceptions
                     }
@@ -160,6 +198,36 @@ fun CameraPreview() {
             .matchParentSize()
             .background(Color.Black.copy(alpha = 0.8f))
         )
+
+        IconButton(
+            onClick = {
+                isFlashOn.value = !isFlashOn.value
+                cameraControl.value?.let { toggleFlash(cameraControl = it, isFlashOn = isFlashOn.value) }
+            },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = isFlashOn.value
+                    .let { if (it) R.drawable.twotone_flashlight_on_24 else R.drawable.twotone_flashlight_off_24 }),
+                contentDescription = "Toggle Flash"
+            )
+        }
+
+        IconButton(
+            onClick = {
+                println("Settings clicked")
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.TwoTone.Settings,
+                contentDescription = "Settings"
+            )
+        }
 
         // Scanning area box with a clear cutout
         Box(
@@ -184,30 +252,99 @@ fun CameraPreview() {
                 drawRect(
                     color = Color.Red,
                     topLeft = Offset(bounds.left.toFloat(), bounds.top.toFloat()),
-                    size = Size(bounds.width().toFloat(), bounds.height().toFloat()),
+                    size = Size(bounds.width().toFloat(), bounds.height().toFloat()), // Use the actual width of the bounding box
                     style = Stroke(width = 3.dp.toPx())
                 )
             }
         }
+
+
+        qrCodeData.value?.let {
+            ShowQRCodeDataPopup(qrCodeData = it, context = context)
+        }
     }
 }
 
-private fun getBoundingBox(resultPoints: Array<ResultPoint>?, imageWidth: Int, imageHeight: Int, previewWidth: Int, previewHeight: Int): Rect? {
-    if (resultPoints == null || resultPoints.size != 4) {
+@Composable
+fun ShowQRCodeDataPopup(qrCodeData: String, context: Context) {
+    val showDialog = remember { mutableStateOf(true) }
+
+    // Function to open URL in browser
+    fun openUrlInBrowser(url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        context.startActivity(intent)
+    }
+
+    // Check if the QR code data is a URL
+    val isUrl = Patterns.WEB_URL.matcher(qrCodeData).matches()
+
+    if (showDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showDialog.value = false },
+            title = { Text("Scanned QR Code") },
+            text = {
+                if (isUrl) {
+                    val colorHex = Color(android.graphics.Color.parseColor("#2196F3"))
+                    val annotatedText = buildAnnotatedString {
+                        withStyle(style = SpanStyle(color = colorHex, textDecoration = TextDecoration.Underline)) {
+                            append(qrCodeData)
+                        }
+                    }
+                    ClickableText(
+                        text = annotatedText,
+                        onClick = { openUrlInBrowser(qrCodeData) },
+                    )
+                } else {
+                    Text(qrCodeData)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showDialog.value = false }) {
+                    Text("Okay")
+                }
+            },
+            shape = RoundedCornerShape(size = 12.dp),
+            modifier = Modifier
+                .padding(6.dp)
+                .background(MaterialTheme.colorScheme.surface, AbsoluteRoundedCornerShape(12.dp))
+        )
+    }
+}
+
+
+
+private fun toggleFlash(cameraControl: CameraControl, isFlashOn: Boolean) {
+    cameraControl.enableTorch(isFlashOn)
+}
+
+private fun getBoundingBox(resultPoints: Array<ResultPoint>?, imageProxy: ImageProxy, previewView: PreviewView): Rect? {
+    // Check if resultPoints is null or has less than 4 points
+    if (resultPoints == null || resultPoints.size < 4) {
         return null
     }
 
-    // Calculate scale factors
-    val scaleX = previewWidth.toFloat() / imageWidth
-    val scaleY = previewHeight.toFloat() / imageHeight
+    // Rotate the points by 90 degrees clockwise
+    val rotatedPoints = resultPoints.map {
+        // Rotating each point 90 degrees clockwise
+        val rotatedX = imageProxy.height - it.y
+        val rotatedY = it.x
+        ResultPoint(rotatedX.toFloat(), rotatedY.toFloat())
+    }
 
-    // Apply scale factors to the coordinates
-    val left = (resultPoints[0].x * scaleX).toInt()
-    val top = (resultPoints[0].y * scaleY).toInt()
-    val right = (resultPoints[2].x * scaleX).toInt()
-    val bottom = (resultPoints[2].y * scaleY).toInt()
+    // Scale the rotated points to the previewView size
+    val scaleX = previewView.width.toFloat() / imageProxy.height.toFloat()
+    val scaleY = previewView.height.toFloat() / imageProxy.width.toFloat()
 
-    return Rect(left, top, right, bottom)
+    val scaledPoints = rotatedPoints.map {
+        ResultPoint(it.x * scaleX, it.y * scaleY)
+    }
+
+    return Rect(
+        scaledPoints[1].x.toInt(),
+        scaledPoints[1].y.toInt(),
+        scaledPoints[2].x.toInt(),
+        scaledPoints[3].y.toInt()
+    )
 }
 
 
