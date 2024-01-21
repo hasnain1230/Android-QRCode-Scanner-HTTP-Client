@@ -109,9 +109,7 @@ class CameraPreviewInitializer(navController: NavController) {
 
             DrawBoundingBox(qrCodeBounds)
 
-            qrCodeData.value?.let {
-                QRCodeViews().ShowQRCodeDataPopup(qrCodeData = it, context = context)
-            }
+            QRCodeViews().ShowQRCodeDataPopup(qrCodeData, context)
         }
     }
 
@@ -149,6 +147,7 @@ class CameraPreviewInitializer(navController: NavController) {
                                     // Display a popup with the scanned QR data
                                     qrCodeData.value = result.text
                                     qrCodeBounds.value = getBoundingBox(result.resultPoints, imageProxy, previewView = previewView)
+                                    println("Camera Preview Setup ${result.text}")
                                 } else {
                                     qrCodeBounds.value = null
                                 }
@@ -177,6 +176,8 @@ class CameraPreviewInitializer(navController: NavController) {
             },
             modifier = Modifier.fillMaxSize()
         )
+
+
     }
 
     @Composable
