@@ -69,15 +69,7 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
             this.requestPermissionLauncher.launch(android.Manifest.permission.CAMERA)
         }
     }
-
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        // Forward results to EasyPermissions
-        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
-    }
-
+    
 
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
         Toast.makeText(this, R.string.camera_permission_granted, Toast.LENGTH_SHORT).show()

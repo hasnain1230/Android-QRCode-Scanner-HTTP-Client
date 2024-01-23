@@ -200,7 +200,8 @@ class CameraPreviewInitializer(navController: NavController) {
                     Icon(
                         painter = painterResource(id = isFlashOn.value
                             .let { if (it) R.drawable.twotone_flashlight_on_24 else R.drawable.twotone_flashlight_off_24 }),
-                        contentDescription = R.string.toggle_flash.toString()
+                        contentDescription = LocalContext.current.getString(R.string.toggle_flash),
+                        tint = Color.White
                     )
                 }
             }
@@ -217,8 +218,9 @@ class CameraPreviewInitializer(navController: NavController) {
             modifier = modifier
         ) {
             Icon(
-                imageVector = Icons.TwoTone.Settings,
-                contentDescription = R.string.settings.toString()
+                painter = painterResource(id = R.drawable.twotone_settings_24),
+                contentDescription = LocalContext.current.getString(R.string.settings),
+                tint = Color.White
             )
         }
     }
