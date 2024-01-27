@@ -28,10 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.jscj.qrcodescanner.R
+import com.jscj.qrcodescanner.http.BodyTypes
+import com.jscj.qrcodescanner.http.HttpEnum
 
-class SettingsUI {
-    private val viewModel = SettingsController()
+class SettingsUI(private val settingsViewModel: SettingsViewModel) {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -45,12 +48,12 @@ class SettingsUI {
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text("Settings") },
+                        title = { Text(stringResource(R.string.settings_title)) },
                         navigationIcon = {
                             IconButton(onClick = onNavigateBack) {
                                 Icon(
                                     imageVector = Icons.Filled.ArrowBack,
-                                    contentDescription = "Back"
+                                    contentDescription = stringResource(R.string.back_button_content_descritption)
                                 )
                             }
                         }
@@ -62,25 +65,30 @@ class SettingsUI {
                         .padding(it)
                         .padding(16.dp)
                 ) {
-                    Text("Select Mode")
+                    Text(stringResource(R.string.select_mode_text))
                     Spacer(
                         Modifier
                             .width(16.dp)
                             .padding(8.dp))
 
-                    ModeSelectionRow(currentMode = viewModel.getCurrentMode().value, onModeChange = { viewModel.setCurrentMode(it) })
+                    ModeSelectionRow(currentMode = settingsViewModel.getCurrentMode().value, onModeChange = { settingsViewModel.setCurrentMode(it) })
 
 
-                    if (viewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE) {
+                    if (settingsViewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Dropdown(selectedItem = viewModel.getSelectedHttpMethod().value, onMethodSelected = { viewModel.setSelectedHttpMethod(it) })
+                        Text(stringResource(R.string.select_http_method_text))
+                        Dropdown(selectedItem = settingsViewModel.getSelectedHttpMethod().value.toString(), HttpEnum.getListOfHttpMethodsAsString(), onMethodSelected = { settingsViewModel.setSelectedHttpMethod(it) })
                         Spacer(modifier = Modifier.height(16.dp))
-                        UrlInputField(url = viewModel.getUrl().value, onUrlChange = { viewModel.setUrl(it) })
+                        UrlInputField(url = settingsViewModel.getUrl().value, onUrlChange = { settingsViewModel.setUrl(it) })
                         Spacer(modifier = Modifier.height(16.dp))
-                        RequestTypeRadioButtons(requestType = viewModel.getRequestType().value, onRequestTypeChange = { viewModel.setRequestType(it) })
+                        RequestTypeRadioButtons(requestType = settingsViewModel.getRequestType().value, onRequestTypeChange = { settingsViewModel.setRequestType(it) })
 
-                        if (viewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
-                            // Show a Dropdown menu for selecting the body type
+                        if (settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
+                            // JSON, XML, Plain Text
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Select Body Type")
+                            Dropdown(selectedItem = settingsViewModel.getSelectedBodyType().value.toString(), BodyTypes.getListOfBodyTypesAsString(), onMethodSelected = { settingsViewModel.setSelectedBodyType(it) })
+
                         }
                     }
                 }
@@ -97,40 +105,38 @@ class SettingsUI {
             )
 
             Spacer(Modifier.width(8.dp))
-            Text("Read Mode")
+            Text(SettingsEnums.READ_MODE.toString())
 
             RadioButton(
                 selected = currentMode == SettingsEnums.HTTP_MODE,
                 onClick = { onModeChange(SettingsEnums.HTTP_MODE) }
             )
 
-            Text("HTTP Mode")
+            Text(SettingsEnums.HTTP_MODE.toString())
         }
     }
 
     @Composable
-    fun Dropdown(selectedItem: SettingsEnums, onMethodSelected: (SettingsEnums) -> Unit) {
+    fun Dropdown(selectedItem: String, dropDownItems: List<String>, onMethodSelected: (String) -> Unit) {
         var expanded by remember { mutableStateOf(false) }
-        val httpMethods = listOf(SettingsEnums.GET, SettingsEnums.POST, SettingsEnums.PUT, SettingsEnums.PATCH, SettingsEnums.DELETE)
 
         Column {
-            Text("Select HTTP Method")
             Box {
                 Button(onClick = { expanded = true }) {
-                    Text(text = selectedItem.toString())
+                    Text(text = selectedItem)
                 }
                 DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    httpMethods.forEach { method ->
+                    dropDownItems.forEach { method ->
                         DropdownMenuItem(
                             onClick = {
                                 onMethodSelected(method)
                                 expanded = false
                             },
                             text = {
-                                Text(text = SettingsEnums.valueOf(method.toString()).toString())
+                                Text(text = method)
                             }
                         )
                     }
@@ -143,11 +149,11 @@ class SettingsUI {
     @Composable
     fun UrlInputField(url: String, onUrlChange: (String) -> Unit) {
         Column {
-            Text("Enter URL")
+            Text(stringResource(R.string.enter_url_text))
             TextField(
                 value = url,
                 onValueChange = onUrlChange,
-                label = { Text("URL") }
+                label = { Text(stringResource(R.string.url_label_text)) }
             )
         }
     }
@@ -155,13 +161,13 @@ class SettingsUI {
     @Composable
     fun RequestTypeRadioButtons(requestType: SettingsEnums, onRequestTypeChange: (SettingsEnums) -> Unit) {
         Column {
-            Text("Request Type")
+            Text(stringResource(R.string.request_type_text))
             Row {
                 RadioButton(
                     selected = requestType == SettingsEnums.CONCATENATE,
                     onClick = { onRequestTypeChange(SettingsEnums.CONCATENATE) }
                 )
-                Text("Concatenate")
+                Text(SettingsEnums.CONCATENATE.toString())
                 Spacer(Modifier.width(8.dp))
                 RadioButton(
                     selected = requestType == SettingsEnums.BODY_REQUEST,
@@ -169,7 +175,8 @@ class SettingsUI {
                         onRequestTypeChange(SettingsEnums.BODY_REQUEST)
                     }
                 )
-                Text("Body Request")
+
+                Text(SettingsEnums.BODY_REQUEST.toString())
             }
         }
     }

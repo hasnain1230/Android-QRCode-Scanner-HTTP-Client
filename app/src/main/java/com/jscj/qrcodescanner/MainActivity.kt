@@ -11,11 +11,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jscj.qrcodescanner.camera.CameraPreviewInitializer
 import com.jscj.qrcodescanner.settings.SettingsUI
+import com.jscj.qrcodescanner.settings.SettingsViewModel
 import com.jscj.qrcodescanner.ui.theme.JSCJQRCodeScannerTheme
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
@@ -47,20 +49,22 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
             }
         }
     }
-    
+
     @Composable
     private fun AppNavigator() {
         val navController = rememberNavController()
-        
+        val settingsViewModel: SettingsViewModel = viewModel()
+
         NavHost(navController = navController, startDestination = "cameraPreview") {
             composable("cameraPreview") {
-                CameraPreviewInitializer(navController).CameraPreview()
+                CameraPreviewInitializer(navController, settingsViewModel).CameraPreview()
             }
             composable("settings") {
-                SettingsUI().SettingsScreen(onNavigateBack = { navController.popBackStack() })
+                SettingsUI(settingsViewModel).SettingsScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }
+
 
     private fun requestCameraPermission() {
         if (EasyPermissions.hasPermissions(this, android.Manifest.permission.CAMERA)) {

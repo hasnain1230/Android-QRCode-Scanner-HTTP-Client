@@ -39,17 +39,12 @@ class QRCodeViews {
 
     @Composable
     fun ShowQRCodeDataPopup(qrCodeData: MutableState<String?>, context: Context) {
-        if (qrCodeData.value == null) {
-            return
-        }
-
         val showDialog = remember { mutableStateOf(true) }
 
 
         // Check if the QR code data is a URL
         val isUrl = qrCodeData.value?.let { Patterns.WEB_URL.matcher(it).matches() }
 
-        println("QR Code Views $qrCodeData")
 
         if (showDialog.value) {
             AlertDialog(

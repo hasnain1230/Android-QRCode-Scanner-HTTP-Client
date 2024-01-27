@@ -10,4 +10,11 @@
     <string name="scanned_qr_code">Scanned QR Code</string>
     <string name="okay_button_text">Okay</string>
     <string name="camera_permission_denied">Camera permissions have been denied. The application will not work correctly.</string>
+    <string name="settings_title">Settings</string>
+    <string name="back_button_content_descritption">Back</string>
+    <string name="select_mode_text">Select Mode</string>
+    <string name="select_http_method_text">Select HTTP Method</string>
+    <string name="enter_url_text">Enter URL</string>
+    <string name="url_label_text">URL</string>
+    <string name="request_type_text">Request Type</string>
 </resources>

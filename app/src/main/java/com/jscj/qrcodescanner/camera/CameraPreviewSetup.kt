@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,11 +51,11 @@ import com.jscj.qrcodescanner.Constants
 import com.jscj.qrcodescanner.R
 import com.jscj.qrcodescanner.qrcode.QRCodeViews
 import com.jscj.qrcodescanner.qrcode.scanQRCode
+import com.jscj.qrcodescanner.settings.SettingsEnums
+import com.jscj.qrcodescanner.settings.SettingsViewModel
 import java.util.EnumMap
 
-class CameraPreviewInitializer(navController: NavController) {
-    private val navController = navController
-
+class CameraPreviewInitializer(private val navController: NavController, private val settingsViewModel: SettingsViewModel) {
     @Composable
     fun CameraPreview() {
         val context = LocalContext.current
@@ -109,7 +107,15 @@ class CameraPreviewInitializer(navController: NavController) {
 
             DrawBoundingBox(qrCodeBounds)
 
-            QRCodeViews().ShowQRCodeDataPopup(qrCodeData, context)
+            // If the QR code data is not null, show the popup
+            qrCodeData.value?.let {
+                settingsViewModel.getCurrentMode().value.let { mode ->
+                    if (mode == SettingsEnums.READ_MODE) {
+                        QRCodeViews().ShowQRCodeDataPopup(qrCodeData = qrCodeData, context = context)
+                    }
+                }
+            }
+
         }
     }
 
@@ -144,10 +150,10 @@ class CameraPreviewInitializer(navController: NavController) {
                                 imageProxy.close()
 
                                 if (result != null) {
-                                    // Display a popup with the scanned QR data
                                     qrCodeData.value = result.text
                                     qrCodeBounds.value = getBoundingBox(result.resultPoints, imageProxy, previewView = previewView)
-                                    println("Camera Preview Setup ${result.text}")
+
+
                                 } else {
                                     qrCodeBounds.value = null
                                 }

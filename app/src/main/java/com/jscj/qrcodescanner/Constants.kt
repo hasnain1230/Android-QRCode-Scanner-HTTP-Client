@@ -4,5 +4,8 @@ class Constants {
     companion object {
         const val SCAN_AREA_MULTIPLIER = 0.6f
         const val CAMERA_PERMISSION_REQUEST_CODE = 100
+
+        val supportedHttpMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE")
+
     }
 }
