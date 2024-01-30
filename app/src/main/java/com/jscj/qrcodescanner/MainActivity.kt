@@ -1,5 +1,6 @@
 package com.jscj.qrcodescanner
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -11,6 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -53,7 +57,16 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
     @Composable
     private fun AppNavigator() {
         val navController = rememberNavController()
-        val settingsViewModel: SettingsViewModel = viewModel()
+        val context: Context = LocalContext.current
+
+        val settingsViewModel: SettingsViewModel = viewModel(
+            factory = object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    val viewModel = SettingsViewModel(context) as? T
+                    return viewModel ?: throw IllegalArgumentException("SettingsViewModel not found")
+                }
+            }
+        )
 
         NavHost(navController = navController, startDestination = "cameraPreview") {
             composable("cameraPreview") {
@@ -73,7 +86,7 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
             this.requestPermissionLauncher.launch(android.Manifest.permission.CAMERA)
         }
     }
-    
+
 
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
         Toast.makeText(this, R.string.camera_permission_granted, Toast.LENGTH_SHORT).show()

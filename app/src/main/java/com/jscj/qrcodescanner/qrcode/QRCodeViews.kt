@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
@@ -38,44 +39,71 @@ class QRCodeViews {
     }
 
     @Composable
-    fun ShowQRCodeDataPopup(qrCodeData: MutableState<String?>, context: Context) {
+    fun ShowQRCodeDataPopup(
+        qrCodeData: MutableState<String?>,
+        context: Context,
+        titleText: String,
+        bodyText: String
+    ) {
         val showDialog = remember { mutableStateOf(true) }
 
-
-        // Check if the QR code data is a URL
-        val isUrl = qrCodeData.value?.let { Patterns.WEB_URL.matcher(it).matches() }
-
+        // Function to open URL
+        fun openUrl(url: String) {
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = Uri.parse(url)
+            context.startActivity(intent)
+        }
 
         if (showDialog.value) {
             AlertDialog(
                 onDismissRequest = { showDialog.value = false },
-                title = { Text(context.getString(R.string.scanned_qr_code)) },
+                title = { Text(titleText, color = Color.White) }, // Set title color
                 text = {
-                    if (isUrl == true) {
-                        val colorHex = Color(android.graphics.Color.parseColor(context.getString(R.string.link_hex_color_code)))
+                    // Check if bodyText contains a URL
+                    val url = Patterns.WEB_URL.matcher(bodyText).takeIf { it.find() }?.group()
+                    if (url != null) {
                         val annotatedText = buildAnnotatedString {
-                            withStyle(style = SpanStyle(color = colorHex, textDecoration = TextDecoration.Underline)) {
-                                append(qrCodeData.value)
-                            }
+                            val startIndex = bodyText.indexOf(url)
+                            val endIndex = startIndex + url.length
+                            append(bodyText)
+                            addStringAnnotation(
+                                tag = "URL",
+                                annotation = url,
+                                start = startIndex,
+                                end = endIndex
+                            )
+                            addStyle(
+                                style = SpanStyle(
+                                    color = Color.Blue, // Color for the link
+                                    textDecoration = TextDecoration.Underline
+                                ),
+                                start = startIndex,
+                                end = endIndex
+                            )
                         }
                         ClickableText(
                             text = annotatedText,
-                            onClick = { openUrlInBrowser(qrCodeData.value!!, context) },
+                            style = TextStyle(color = MaterialTheme.colorScheme.primary), // Set normal text color
+                            onClick = { offset ->
+                                annotatedText.getStringAnnotations("URL", start = offset, end = offset)
+                                    .firstOrNull()?.let { annotation ->
+                                        openUrl(annotation.item)
+                                    }
+                            }
                         )
                     } else {
-                        Text(qrCodeData.value!!)
+                        Text(bodyText, color = Color.White) // Set normal text color
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
                         showDialog.value = false
-
                         CoroutineScope(Dispatchers.Main).launch {
                             delay(500)
                             qrCodeData.value = null
                         }
                     }) {
-                        Text(context.getString(R.string.okay_button_text))
+                        Text(context.getString(R.string.okay_button_text), color = Color.White) // Set button text color
                     }
                 },
                 shape = RoundedCornerShape(size = 12.dp),
@@ -85,4 +113,7 @@ class QRCodeViews {
             )
         }
     }
+
+
+
 }

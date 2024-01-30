@@ -1,5 +1,6 @@
 package com.jscj.qrcodescanner.camera
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Rect
 import android.widget.Toast
@@ -25,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,13 +51,19 @@ import com.google.zxing.MultiFormatReader
 import com.google.zxing.ResultPoint
 import com.jscj.qrcodescanner.Constants
 import com.jscj.qrcodescanner.R
+import com.jscj.qrcodescanner.http.HttpProcessing
+import com.jscj.qrcodescanner.http.HttpProcessing.Companion.processHttp
 import com.jscj.qrcodescanner.qrcode.QRCodeViews
 import com.jscj.qrcodescanner.qrcode.scanQRCode
 import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsViewModel
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.EnumMap
 
 class CameraPreviewInitializer(private val navController: NavController, private val settingsViewModel: SettingsViewModel) {
+    @OptIn(DelicateCoroutinesApi::class)
     @Composable
     fun CameraPreview() {
         val context = LocalContext.current
@@ -73,7 +81,8 @@ class CameraPreviewInitializer(private val navController: NavController, private
             CameraSetup(context, scanner, cameraControl, cameraInfo, qrCodeBounds, qrCodeData)
 
             TranslucentBackground(
-                modifier = Modifier.matchParentSize()
+                modifier = Modifier
+                    .matchParentSize()
                     .background(Color.Black.copy(alpha = 0.8f))
             )
 
@@ -108,12 +117,44 @@ class CameraPreviewInitializer(private val navController: NavController, private
             DrawBoundingBox(qrCodeBounds)
 
             // If the QR code data is not null, show the popup
+
+            val context = LocalContext.current
+            val titleText = remember { mutableStateOf<String?>(null) }
+            val bodyText = remember { mutableStateOf<String?>(null) }
+            val showPopup = remember { mutableStateOf(false) }
+
             qrCodeData.value?.let {
                 settingsViewModel.getCurrentMode().value.let { mode ->
                     if (mode == SettingsEnums.READ_MODE) {
-                        QRCodeViews().ShowQRCodeDataPopup(qrCodeData = qrCodeData, context = context)
+                        titleText.value = "Scanned QR Code"
+                        bodyText.value = qrCodeData.value
+                        showPopup.value = true
+                    } else if (mode == SettingsEnums.HTTP_MODE) {
+                        LaunchedEffect(qrCodeData.value) {
+                            val result = processHttp(settings = settingsViewModel, qrCodeData = qrCodeData.value!!)
+                            val responseCode = result.first
+                            val responseBody = result.second
+
+                            titleText.value = if (responseCode in 200..299) {
+                                "${settingsViewModel.getSelectedHttpMethod().value} Request Successful"
+                            } else {
+                                "Error - ${settingsViewModel.getSelectedHttpMethod().value} Request Failed"
+                            }
+
+                            bodyText.value = if (responseCode in 200..299) {
+                                "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value.plus(qrCodeData.value)}\n\nResponse Code: $responseCode\n\n"
+                            } else {
+                                "There was an error sending the ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
+                            }
+
+                            showPopup.value = true
+                        }
                     }
                 }
+            }
+
+            if (showPopup.value && titleText.value != null && bodyText.value != null) {
+                QRCodeViews().ShowQRCodeDataPopup(qrCodeData = qrCodeData, context = context, titleText = titleText.value!!, bodyText = bodyText.value!!)
             }
 
         }
@@ -152,8 +193,6 @@ class CameraPreviewInitializer(private val navController: NavController, private
                                 if (result != null) {
                                     qrCodeData.value = result.text
                                     qrCodeBounds.value = getBoundingBox(result.resultPoints, imageProxy, previewView = previewView)
-
-
                                 } else {
                                     qrCodeBounds.value = null
                                 }
