@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
             composable("cameraPreview") {
                 CameraPreviewInitializer(navController, settingsViewModel).CameraPreview()
             }
+
             composable("settings") {
                 SettingsUI(settingsViewModel).SettingsScreen(onNavigateBack = { navController.popBackStack() })
             }

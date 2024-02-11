@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -40,6 +41,20 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     @Composable
     fun SettingsScreen(onNavigateBack: () -> Unit) {
         val darkTheme = isSystemInDarkTheme() // Will implement this later
+        var showUrlEmptyDialog by remember { mutableStateOf(false) }
+
+        if (showUrlEmptyDialog) {
+            ShowURLEmptyDialog()
+        }
+
+        // Modify the navigation logic
+        val modifiedOnNavigateBack = {
+            if (settingsViewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE && settingsViewModel.getUrl().value.isEmpty()) {
+                showUrlEmptyDialog = true
+            } else {
+                onNavigateBack()
+            }
+        }
 
         MaterialTheme(
             typography = MaterialTheme.typography,
@@ -50,7 +65,7 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                     TopAppBar(
                         title = { Text(stringResource(R.string.settings_title)) },
                         navigationIcon = {
-                            IconButton(onClick = onNavigateBack) {
+                            IconButton(onClick = modifiedOnNavigateBack) {
                                 Icon(
                                     imageVector = Icons.Filled.ArrowBack,
                                     contentDescription = stringResource(R.string.back_button_content_descritption)
@@ -114,6 +129,21 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
 
             Text(SettingsEnums.HTTP_MODE.toString())
         }
+    }
+
+    @Composable
+    fun ShowURLEmptyDialog(showDialog: Boolean) {
+        var showUrlEmptyDialog by remember { mutableStateOf(showDialog) }
+        AlertDialog(
+            onDismissRequest = { showUrlEmptyDialog = false },
+            confirmButton = {
+                Button(onClick = { showUrlEmptyDialog = false }) {
+                    Text("Okay")
+                }
+            },
+            title = { Text("URL Required") },
+            text = { Text("Please enter a URL first, or select \"Read Mode.\"") }
+        )
     }
 
     @Composable
