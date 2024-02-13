@@ -43,10 +43,6 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
         val darkTheme = isSystemInDarkTheme() // Will implement this later
         var showUrlEmptyDialog by remember { mutableStateOf(false) }
 
-        if (showUrlEmptyDialog) {
-            ShowURLEmptyDialog()
-        }
-
         // Modify the navigation logic
         val modifiedOnNavigateBack = {
             if (settingsViewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE && settingsViewModel.getUrl().value.isEmpty()) {
@@ -88,6 +84,12 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
 
                     ModeSelectionRow(currentMode = settingsViewModel.getCurrentMode().value, onModeChange = { settingsViewModel.setCurrentMode(it) })
 
+                    if (showUrlEmptyDialog) {
+                        ShowURLEmptyDialog(
+                            showDialog = showUrlEmptyDialog,
+                            onDismiss = { showUrlEmptyDialog = false }
+                        )
+                    }
 
                     if (settingsViewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE) {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -132,19 +134,22 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     }
 
     @Composable
-    fun ShowURLEmptyDialog(showDialog: Boolean) {
-        var showUrlEmptyDialog by remember { mutableStateOf(showDialog) }
-        AlertDialog(
-            onDismissRequest = { showUrlEmptyDialog = false },
-            confirmButton = {
-                Button(onClick = { showUrlEmptyDialog = false }) {
-                    Text("Okay")
-                }
-            },
-            title = { Text("URL Required") },
-            text = { Text("Please enter a URL first, or select \"Read Mode.\"") }
-        )
+    fun ShowURLEmptyDialog(showDialog: Boolean, onDismiss: () -> Unit) {
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                confirmButton = {
+                    Button(onClick = onDismiss) {
+                        Text("Okay")
+                    }
+                },
+                title = { Text("URL Required") },
+                text = { Text("Please enter a URL first, or select \"Read Mode.\"") }
+            )
+        }
     }
+
+
 
     @Composable
     fun Dropdown(selectedItem: String, dropDownItems: List<String>, onMethodSelected: (String) -> Unit) {
