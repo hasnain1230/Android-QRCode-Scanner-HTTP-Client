@@ -17,4 +17,5 @@
     <string name="enter_url_text">Enter URL</string>
     <string name="url_label_text">URL</string>
     <string name="request_type_text">Request Type</string>
+    <string name="saved_links">Saved links</string>
 </resources>

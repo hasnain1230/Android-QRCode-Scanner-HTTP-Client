@@ -73,6 +73,7 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:$zebraCrossingVersion")
     implementation("pub.devrel:easypermissions:$easyPermissionsVersion")
     implementation("com.squareup.okhttp3:okhttp:$okHttpVersion")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.1")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

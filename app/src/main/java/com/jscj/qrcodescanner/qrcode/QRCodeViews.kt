@@ -1,10 +1,7 @@
 package com.jscj.qrcodescanner.qrcode
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Rect
-import android.media.MediaPlayer
-import android.net.Uri
 import android.util.Patterns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
@@ -23,23 +20,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.jscj.qrcodescanner.Helper
 import com.jscj.qrcodescanner.R
 
 class QRCodeViews {
     companion object {
         var dialogsShown: Int = 0
     }
-    // Function to open URL
-    private fun openUrl(context: Context, url: String) {
-        val intent = Intent(Intent.ACTION_VIEW)
-        intent.data = Uri.parse(url)
-        context.startActivity(intent)
-    }
 
-    private fun playSound(context: Context, resId: Int) {
-        val mediaPlayer = MediaPlayer.create(context, resId)
-        mediaPlayer.start()
-    }
 
     @Composable
     fun ShowQRCodeDataPopup(
@@ -52,7 +40,7 @@ class QRCodeViews {
         rebindCamera: () -> Unit,
     ) {
         if (dialogsShown == 0) {
-            playSound(context, com.google.zxing.client.android.R.raw.zxing_beep)
+            Helper.playSound(context, com.google.zxing.client.android.R.raw.zxing_beep)
         }
 
         if (showDialog.value) {
@@ -97,7 +85,7 @@ class QRCodeViews {
                             onClick = { offset ->
                                 annotatedText.getStringAnnotations("URL", start = offset, end = offset)
                                     .firstOrNull()?.let { annotation ->
-                                        openUrl(context, annotation.item)
+                                        Helper.openUrl(context, annotation.item)
                                     }
                             }
                         )

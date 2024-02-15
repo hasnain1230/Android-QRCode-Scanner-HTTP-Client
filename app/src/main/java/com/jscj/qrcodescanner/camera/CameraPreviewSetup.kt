@@ -17,9 +17,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -97,7 +100,7 @@ class CameraPreviewInitializer(
             TranslucentBackground(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(Color.Black.copy(alpha = 0.8f))
+                    .background(Color.Black.copy(alpha = 0.65f))
             )
 
             FlashButton(
@@ -109,12 +112,18 @@ class CameraPreviewInitializer(
                     .padding(12.dp)
             )
 
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                ) {
+                    SavedLinksButton(modifier = Modifier.padding(4.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    SettingsButton(modifier = Modifier.padding(4.dp))
+                }
+            }
 
-            SettingsButton(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(12.dp)
-            )
 
             ScanningAreaBox(modifier = Modifier
                 .size(scanBoxSize)
@@ -296,6 +305,21 @@ class CameraPreviewInitializer(
                     )
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun SavedLinksButton(modifier: Modifier) {
+        IconButton(
+            onClick = {
+                navController.navigate("savedLinks")
+            }, modifier = modifier
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.twotone_bookmarks_24),
+                contentDescription = LocalContext.current.getString(R.string.saved_links),
+                tint = Color.White
+            )
         }
     }
 

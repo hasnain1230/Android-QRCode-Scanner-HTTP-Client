@@ -21,6 +21,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jscj.qrcodescanner.camera.CameraPreviewInitializer
+import com.jscj.qrcodescanner.savedlinks.SavedLinksUI
+import com.jscj.qrcodescanner.savedlinks.SavedLinksViewModel
 import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsUI
 import com.jscj.qrcodescanner.settings.SettingsViewModel
@@ -69,6 +71,14 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
             }
         )
 
+        val savedLinksViewModel: SavedLinksViewModel = viewModel(
+            factory = object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return SavedLinksViewModel(context) as T
+                }
+            }
+        )
+
 
         NavHost(navController = navController, startDestination = "cameraPreview") {
             composable("cameraPreview") {
@@ -85,6 +95,10 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
                         navController.navigateUp()
                     }
                 }
+            }
+
+            composable("savedLinks") {
+                SavedLinksUI(savedLinksViewModel).SavedLinksScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }
