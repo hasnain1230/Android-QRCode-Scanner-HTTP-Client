@@ -29,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -48,6 +47,7 @@ import androidx.navigation.NavController
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
+import com.google.zxing.Result
 import com.google.zxing.ResultPoint
 import com.jscj.qrcodescanner.Constants
 import com.jscj.qrcodescanner.R
@@ -57,13 +57,15 @@ import com.jscj.qrcodescanner.qrcode.scanQRCode
 import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.EnumMap
 
-class CameraPreviewInitializer(private val navController: NavController, private val settingsViewModel: SettingsViewModel) {
+class CameraPreviewInitializer(
+    private val navController: NavController,
+    private val settingsViewModel: SettingsViewModel
+) {
     @Composable
     fun CameraPreview() {
         val context = LocalContext.current
@@ -74,12 +76,23 @@ class CameraPreviewInitializer(private val navController: NavController, private
         val qrCodeData = remember { mutableStateOf<String?>(null) }
         val isFlashOn = remember { mutableStateOf(false) }
         val isScanning = remember { mutableStateOf(false) }
-
+        val titleText = remember { mutableStateOf<String?>(null) }
+        val bodyText = remember { mutableStateOf<String?>(null) }
+        val showPopup = remember { mutableStateOf(false) }
+        var bindCamera: MutableState<(() -> Unit)?>
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val scanBoxSize = maxWidth * Constants.SCAN_AREA_MULTIPLIER
 
-            CameraSetup(context, scanner, cameraControl, cameraInfo, qrCodeBounds, qrCodeData, isScanning)
+            bindCamera = cameraSetup(
+                context,
+                scanner,
+                cameraControl,
+                cameraInfo,
+                qrCodeBounds,
+                qrCodeData,
+                isScanning
+            )
 
             TranslucentBackground(
                 modifier = Modifier
@@ -87,16 +100,20 @@ class CameraPreviewInitializer(private val navController: NavController, private
                     .background(Color.Black.copy(alpha = 0.8f))
             )
 
-            FlashButton(cameraInfo, cameraControl, isFlashOn,
+            FlashButton(
+                cameraInfo,
+                cameraControl,
+                isFlashOn,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .padding(12.dp)
             )
 
 
-            SettingsButton(modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(12.dp)
+            SettingsButton(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
             )
 
             ScanningAreaBox(modifier = Modifier
@@ -112,17 +129,10 @@ class CameraPreviewInitializer(private val navController: NavController, private
                         blendMode = BlendMode.Clear
                     )
                 }
-                .border(2.dp, MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(12.dp))
-            )
+                .border(2.dp, MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(12.dp)))
 
             DrawBoundingBox(qrCodeBounds)
 
-            // If the QR code data is not null, show the popup
-
-            val context = LocalContext.current
-            val titleText = remember { mutableStateOf<String?>(null) }
-            val bodyText = remember { mutableStateOf<String?>(null) }
-            val showPopup = remember { mutableStateOf(false) }
 
             qrCodeData.value?.let {
                 settingsViewModel.getCurrentMode().value.let { mode ->
@@ -132,7 +142,15 @@ class CameraPreviewInitializer(private val navController: NavController, private
                         showPopup.value = true
                     } else if (mode == SettingsEnums.HTTP_MODE) {
                         LaunchedEffect(qrCodeData.value) {
-                            val result = processHttp(settings = settingsViewModel, qrCodeData = qrCodeData.value!!)
+                            val result: Pair<Int, String?> = try {
+                                processHttp(
+                                    settings = settingsViewModel,
+                                    qrCodeData = qrCodeData.value!!
+                                )
+                            } catch (e: Exception) {
+                                Pair(-1, e.message)
+                            }
+
                             val responseCode = result.first
                             val responseBody = result.second
 
@@ -143,13 +161,17 @@ class CameraPreviewInitializer(private val navController: NavController, private
                             }
 
                             bodyText.value = if (responseCode in 200..299) {
-                                "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value.plus(qrCodeData.value)}\n\nResponse Code: $responseCode\n\n"
+                                "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${
+                                    settingsViewModel.getUrl().value.plus(
+                                        qrCodeData.value
+                                    )
+                                }\n\nResponse Code: $responseCode\n\n"
                             } else {
                                 "There was an error sending the ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
                             }
-                        }
 
-                        showPopup.value = true
+                            showPopup.value = true
+                        }
                     }
                 }
             }
@@ -161,7 +183,8 @@ class CameraPreviewInitializer(private val navController: NavController, private
                     titleText = titleText.value!!,
                     bodyText = bodyText.value!!,
                     showDialog = showPopup,
-                    qrCodeBounds = qrCodeBounds
+                    qrCodeBounds = qrCodeBounds,
+                    rebindCamera = bindCamera.value!!
                 )
             }
         }
@@ -173,7 +196,7 @@ class CameraPreviewInitializer(private val navController: NavController, private
     }
 
     @Composable
-    private fun CameraSetup( // Will setup the camera and start scanning for QR codes in the preview frame
+    private fun cameraSetup(
         context: Context,
         scanner: MultiFormatReader,
         cameraControl: MutableState<CameraControl?>,
@@ -181,7 +204,9 @@ class CameraPreviewInitializer(private val navController: NavController, private
         qrCodeBounds: MutableState<Rect?>,
         qrCodeData: MutableState<String?>,
         isScanning: MutableState<Boolean>
-    ) {
+    ): MutableState<(() -> Unit)?> {
+
+        val bindCamera = remember { mutableStateOf<(() -> Unit)?>(null) }
 
         AndroidView(
             factory = { ctx ->
@@ -193,62 +218,54 @@ class CameraPreviewInitializer(private val navController: NavController, private
                         it.setSurfaceProvider(previewView.surfaceProvider)
                     }
 
-                    val imageAnalysis = ImageAnalysis.Builder()
-                        .build()
-                        .also {
-                            it.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
-                                if (isScanning.value) {
-                                    imageProxy.close()
-                                    return@setAnalyzer
-                                }
-
-                                val result = scanQRCode(imageProxy, scanner)
+                    val imageAnalysis = ImageAnalysis.Builder().build().also {
+                        it.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
+                            if (isScanning.value) {
                                 imageProxy.close()
-
-                                if (result != null) {
-                                    isScanning.value = true
-
-                                    // Freeze the camera preview
-                                    // cameraProvider.unbind(preview)
-
-                                    qrCodeData.value = result.text
-                                    qrCodeBounds.value = getBoundingBox(result.resultPoints, imageProxy, previewView = previewView)
-
-                                    CoroutineScope(Dispatchers.Default).launch {
-                                        delay(2000)
-                                        isScanning.value = false
-                                    }
-
-                                } else {
-                                    qrCodeBounds.value = null
-                                }
+                                return@setAnalyzer
                             }
+
+                            val result = scanQRCode(imageProxy, scanner)
+
+                            processQRCodeResults(
+                                result = result,
+                                imageProxy = imageProxy,
+                                isScanning = isScanning,
+                                qrCodeData = qrCodeData,
+                                qrCodeBounds = qrCodeBounds,
+                                previewView = previewView,
+                                cameraProvider = cameraProvider
+                            )
+
+                            imageProxy.close()
                         }
-
-                    val cameraSelector = CameraSelector.Builder()
-                        .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                        .build()
-
-                    try {
-                        cameraProvider.unbindAll()
-                        val camera = cameraProvider.bindToLifecycle(
-                            context as ComponentActivity,
-                            cameraSelector,
-                            preview,
-                            imageAnalysis
-                        )
-                        cameraControl.value = camera.cameraControl
-                        cameraInfo.value = camera.cameraInfo
-                    } catch (exc: Exception) {
-                        Toast.makeText(ctx, R.string.camera_init_error, Toast.LENGTH_SHORT).show()
                     }
+
+                    val cameraSelector =
+                        CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                            .build()
+
+                    bindCamera.value = {
+                        try {
+                            cameraProvider.unbindAll()
+                            val camera = cameraProvider.bindToLifecycle(
+                                context as ComponentActivity, cameraSelector, preview, imageAnalysis
+                            )
+                            cameraControl.value = camera.cameraControl
+                            cameraInfo.value = camera.cameraInfo
+                        } catch (exc: Exception) {
+                            Toast.makeText(ctx, R.string.camera_init_error, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    bindCamera.value?.invoke()
                 }, ContextCompat.getMainExecutor(ctx))
                 previewView
-            },
-            modifier = Modifier.fillMaxSize()
+
+            }, modifier = Modifier.fillMaxSize()
         )
 
-
+        return bindCamera
     }
 
     @Composable
@@ -264,13 +281,16 @@ class CameraPreviewInitializer(private val navController: NavController, private
                 IconButton(
                     onClick = {
                         isFlashOn.value = !isFlashOn.value
-                        cameraControl.value?.let { toggleFlash(cameraControl = it, isFlashOn = isFlashOn.value) }
-                    },
-                    modifier = modifier
+                        cameraControl.value?.let {
+                            toggleFlash(
+                                cameraControl = it,
+                                isFlashOn = isFlashOn.value
+                            )
+                        }
+                    }, modifier = modifier
                 ) {
                     Icon(
-                        painter = painterResource(id = isFlashOn.value
-                            .let { if (it) R.drawable.twotone_flashlight_on_24 else R.drawable.twotone_flashlight_off_24 }),
+                        painter = painterResource(id = isFlashOn.value.let { if (it) R.drawable.twotone_flashlight_on_24 else R.drawable.twotone_flashlight_off_24 }),
                         contentDescription = LocalContext.current.getString(R.string.toggle_flash),
                         tint = Color.White
                     )
@@ -285,8 +305,7 @@ class CameraPreviewInitializer(private val navController: NavController, private
         IconButton(
             onClick = {
                 navController.navigate("settings")
-            },
-            modifier = modifier
+            }, modifier = modifier
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.twotone_settings_24),
@@ -310,7 +329,10 @@ class CameraPreviewInitializer(private val navController: NavController, private
                 drawRect(
                     color = Color.Red,
                     topLeft = Offset(bounds.left.toFloat(), bounds.top.toFloat()),
-                    size = Size(bounds.width().toFloat(), bounds.height().toFloat()), // Use the actual width of the bounding box
+                    size = Size(
+                        bounds.width().toFloat(),
+                        bounds.height().toFloat()
+                    ), // Use the actual width of the bounding box
                     style = Stroke(width = 3.dp.toPx())
                 )
             }
@@ -330,7 +352,11 @@ class CameraPreviewInitializer(private val navController: NavController, private
         cameraControl.enableTorch(isFlashOn)
     }
 
-    private fun getBoundingBox(resultPoints: Array<ResultPoint>?, imageProxy: ImageProxy, previewView: PreviewView): Rect? {
+    private fun getBoundingBox(
+        resultPoints: Array<ResultPoint>?,
+        imageProxy: ImageProxy,
+        previewView: PreviewView
+    ): Rect? {
         // Check if resultPoints is null or has less than 4 points
 
         if (resultPoints == null || resultPoints.size < 4) {
@@ -359,5 +385,36 @@ class CameraPreviewInitializer(private val navController: NavController, private
             scaledPoints[2].x.toInt(),
             scaledPoints[3].y.toInt()
         )
+    }
+
+    private fun processQRCodeResults(
+        result: Result?,
+        imageProxy: ImageProxy,
+        isScanning: MutableState<Boolean>,
+        qrCodeData: MutableState<String?>,
+        qrCodeBounds: MutableState<Rect?>,
+        previewView: PreviewView,
+        cameraProvider: ProcessCameraProvider
+    ) {
+        if (result != null) {
+            isScanning.value = true
+
+            println("QR Code Data: ${result.text}")
+
+            qrCodeData.value = result.text
+            qrCodeBounds.value =
+                getBoundingBox(result.resultPoints, imageProxy, previewView = previewView)
+
+            cameraProvider.unbindAll()
+
+            CoroutineScope(Dispatchers.Default).launch {
+                delay(Constants.QR_CODE_SCAN_DELAY)
+                isScanning.value = false
+            }
+
+
+        } else {
+            qrCodeBounds.value = null
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.jscj.qrcodescanner.qrcode
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import android.media.MediaPlayer
 import android.net.Uri
 import android.util.Patterns
@@ -25,6 +26,9 @@ import androidx.compose.ui.unit.dp
 import com.jscj.qrcodescanner.R
 
 class QRCodeViews {
+    companion object {
+        var dialogsShown: Int = 0
+    }
     // Function to open URL
     private fun openUrl(context: Context, url: String) {
         val intent = Intent(Intent.ACTION_VIEW)
@@ -44,16 +48,22 @@ class QRCodeViews {
         titleText: String,
         bodyText: String,
         showDialog: MutableState<Boolean>,
-        qrCodeBounds: MutableState<android.graphics.Rect?>
+        qrCodeBounds: MutableState<Rect?>,
+        rebindCamera: () -> Unit,
     ) {
-        if (showDialog.value) {
+        if (dialogsShown == 0) {
             playSound(context, com.google.zxing.client.android.R.raw.zxing_beep)
+        }
+
+        if (showDialog.value) {
+            dialogsShown++
 
             AlertDialog(
                 onDismissRequest = {
                     showDialog.value = false
                     qrCodeData.value = null
                     qrCodeBounds.value = null
+                    dialogsShown = 0
                 },
                 title = {
                     Text(titleText)
@@ -100,6 +110,9 @@ class QRCodeViews {
                         showDialog.value = false
                         qrCodeData.value = null
                         qrCodeBounds.value = null
+                        dialogsShown = 0
+
+                        rebindCamera.invoke()
                     }) {
                         Text(context.getString(R.string.okay_button_text)) // Set button text color
                     }

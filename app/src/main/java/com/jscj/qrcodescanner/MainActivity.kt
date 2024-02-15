@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +21,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jscj.qrcodescanner.camera.CameraPreviewInitializer
+import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsUI
 import com.jscj.qrcodescanner.settings.SettingsViewModel
 import com.jscj.qrcodescanner.ui.theme.JSCJQRCodeScannerTheme
@@ -62,11 +64,11 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
         val settingsViewModel: SettingsViewModel = viewModel(
             factory = object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    val viewModel = SettingsViewModel(context) as? T
-                    return viewModel ?: throw IllegalArgumentException("SettingsViewModel not found")
+                    return SettingsViewModel(context) as T
                 }
             }
         )
+
 
         NavHost(navController = navController, startDestination = "cameraPreview") {
             composable("cameraPreview") {
@@ -75,9 +77,19 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
 
             composable("settings") {
                 SettingsUI(settingsViewModel).SettingsScreen(onNavigateBack = { navController.popBackStack() })
+                BackHandler(enabled = navController.currentDestination?.route == "settings") {
+                    if (settingsViewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE && settingsViewModel.getUrl().value.isEmpty()) {
+                        // Tell the SettingsUI to show the dialog
+                        settingsViewModel.showDialog()
+                    } else {
+                        navController.navigateUp()
+                    }
+                }
             }
         }
     }
+
+
 
 
     private fun requestCameraPermission() {

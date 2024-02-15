@@ -1,6 +1,5 @@
 package com.jscj.qrcodescanner.settings
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,13 +39,19 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun SettingsScreen(onNavigateBack: () -> Unit) {
-        val darkTheme = isSystemInDarkTheme() // Will implement this later
         var showUrlEmptyDialog by remember { mutableStateOf(false) }
+
+        if (settingsViewModel.showUrlEmptyDialog.value) {
+            ShowURLEmptyDialog(
+                showDialog = settingsViewModel.showUrlEmptyDialog.value,
+                onDismiss = { settingsViewModel.dismissDialog() }
+            )
+        }
 
         // Modify the navigation logic
         val modifiedOnNavigateBack = {
             if (settingsViewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE && settingsViewModel.getUrl().value.isEmpty()) {
-                showUrlEmptyDialog = true
+                settingsViewModel.showDialog()
             } else {
                 onNavigateBack()
             }

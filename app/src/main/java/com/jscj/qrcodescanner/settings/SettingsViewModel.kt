@@ -2,13 +2,14 @@ package com.jscj.qrcodescanner.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.jscj.qrcodescanner.http.BodyTypes
 import com.jscj.qrcodescanner.http.HttpEnum
 
 class SettingsViewModel(context: Context) : ViewModel() {
-    private val sharedPreferences: SharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val sharedPreferences: SharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE) // Private mode because we don't want other apps to access this data
 
     private val possibleModes = SettingsEnums.getPossibleModes()
     private var currentMode = mutableStateOf(SettingsEnums.READ_MODE)
@@ -16,10 +17,12 @@ class SettingsViewModel(context: Context) : ViewModel() {
     private var selectedHttpMethod = mutableStateOf(HttpEnum.GET)
     private var url = mutableStateOf("")
     private val possibleRequestTypes = SettingsEnums.getPossibleRequestTypes()
+    private val _showUrlEmptyDialog = mutableStateOf(false)
     private var requestType = mutableStateOf(SettingsEnums.CONCATENATE)
     private var possibleBodyTypes = BodyTypes.getListOfBodyTypesAsString()
     private var selectedBodyType = mutableStateOf(BodyTypes.PLAIN_TEXT)
 
+    val showUrlEmptyDialog: State<Boolean> = _showUrlEmptyDialog
 
     init {
         loadSettings()
@@ -75,6 +78,14 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
         selectedBodyType.value = BodyTypes.fromString(bodyType)
         sharedPreferences.edit().putString("bodyType", bodyType).apply()
+    }
+
+    fun showDialog() {
+        _showUrlEmptyDialog.value = true
+    }
+
+    fun dismissDialog() {
+        _showUrlEmptyDialog.value = false
     }
 
     private fun loadSettings() {
