@@ -32,6 +32,9 @@ class HttpProcessing {
                 null
             }
 
+            // Print request body data
+
+
             return Request.Builder().url(url).also { builder ->
                 when (method) {
                     HttpEnum.GET -> builder.get()

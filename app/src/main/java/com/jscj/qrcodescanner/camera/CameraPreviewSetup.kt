@@ -169,13 +169,18 @@ class CameraPreviewInitializer(
                                 "Error - ${settingsViewModel.getSelectedHttpMethod().value} Request Failed"
                             }
 
-                            bodyText.value = if (responseCode in 200..299) {
+
+
+                            bodyText.value = if (responseCode in 200..299 && settingsViewModel.getRequestType().value == SettingsEnums.CONCATENATE) {
                                 "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${
                                     settingsViewModel.getUrl().value.plus(
                                         qrCodeData.value
                                     )
                                 }\n\nResponse Code: $responseCode\n\n"
-                            } else {
+                            } else if (responseCode in 200..299 && settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
+                                "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
+                            }
+                            else {
                                 "There was an error sending the ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
                             }
 

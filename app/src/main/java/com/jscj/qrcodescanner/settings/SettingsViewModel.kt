@@ -28,6 +28,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
         loadSettings()
     }
 
+    // Getters
     fun getCurrentMode() = currentMode
     fun getSelectedHttpMethod() = selectedHttpMethod
     fun getUrl() = url
@@ -78,6 +79,14 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
         selectedBodyType.value = BodyTypes.fromString(bodyType)
         sharedPreferences.edit().putString("bodyType", bodyType).apply()
+    }
+
+    fun getAllowedRequestTypes(): List<SettingsEnums> {
+        return if (selectedHttpMethod.value == HttpEnum.GET) {
+            listOf(SettingsEnums.CONCATENATE)
+        } else {
+            possibleRequestTypes
+        }
     }
 
     fun showDialog() {

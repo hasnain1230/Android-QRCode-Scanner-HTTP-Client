@@ -103,9 +103,13 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
                         UrlInputField(url = settingsViewModel.getUrl().value, onUrlChange = { settingsViewModel.setUrl(it) })
                         Spacer(modifier = Modifier.height(16.dp))
-                        RequestTypeRadioButtons(requestType = settingsViewModel.getRequestType().value, onRequestTypeChange = { settingsViewModel.setRequestType(it) })
 
-                        if (settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
+                        RequestTypeRadioButtons(requestType = settingsViewModel.getRequestType().value,
+                            requestTypeList = settingsViewModel.getAllowedRequestTypes(),
+                            onRequestTypeChange = { settingsViewModel.setRequestType(it) })
+
+                        if (settingsViewModel.getSelectedHttpMethod().value != HttpEnum.GET &&
+                            settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
                             // JSON, XML, Plain Text
                             Spacer(modifier = Modifier.height(16.dp))
                             Text("Select Body Type")
@@ -199,24 +203,18 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     }
 
     @Composable
-    fun RequestTypeRadioButtons(requestType: SettingsEnums, onRequestTypeChange: (SettingsEnums) -> Unit) {
+    fun RequestTypeRadioButtons(requestType: SettingsEnums, requestTypeList: List<SettingsEnums>, onRequestTypeChange: (SettingsEnums) -> Unit) {
         Column {
             Text(stringResource(R.string.request_type_text))
             Row {
-                RadioButton(
-                    selected = requestType == SettingsEnums.CONCATENATE,
-                    onClick = { onRequestTypeChange(SettingsEnums.CONCATENATE) }
-                )
-                Text(SettingsEnums.CONCATENATE.toString())
-                Spacer(Modifier.width(8.dp))
-                RadioButton(
-                    selected = requestType == SettingsEnums.BODY_REQUEST,
-                    onClick = {
-                        onRequestTypeChange(SettingsEnums.BODY_REQUEST)
-                    }
-                )
-
-                Text(SettingsEnums.BODY_REQUEST.toString())
+                for (type in requestTypeList) {
+                    RadioButton(
+                        selected = requestType == type,
+                        onClick = { onRequestTypeChange(type) }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(type.toString())
+                }
             }
         }
     }
