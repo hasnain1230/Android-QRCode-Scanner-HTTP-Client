@@ -90,7 +90,6 @@ class SavedLinksUI(private val savedLinksViewModel: SavedLinksViewModel) {
                         if (isSelectionMode) {
                             if (selectedLinks.isNotEmpty()) {
                                 IconButton(onClick = {
-                                    // TODO: Implement logic to delete selected links
                                     savedLinksViewModel.removeLinks(selectedLinks)
                                     selectedLinks.clear()
                                 }) {
