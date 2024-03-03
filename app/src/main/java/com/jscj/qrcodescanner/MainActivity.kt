@@ -36,13 +36,20 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        this.requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                onPermissionsGranted(Constants.CAMERA_PERMISSION_REQUEST_CODE, mutableListOf(android.Manifest.permission.CAMERA))
-            } else {
-                onPermissionsDenied(Constants.CAMERA_PERMISSION_REQUEST_CODE, mutableListOf(android.Manifest.permission.CAMERA))
+        this.requestPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+                if (isGranted) {
+                    onPermissionsGranted(
+                        Constants.CAMERA_PERMISSION_REQUEST_CODE,
+                        mutableListOf(android.Manifest.permission.CAMERA)
+                    )
+                } else {
+                    onPermissionsDenied(
+                        Constants.CAMERA_PERMISSION_REQUEST_CODE,
+                        mutableListOf(android.Manifest.permission.CAMERA)
+                    )
+                }
             }
-        }
 
         this.requestCameraPermission()
 
@@ -102,8 +109,6 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
             }
         }
     }
-
-
 
 
     private fun requestCameraPermission() {

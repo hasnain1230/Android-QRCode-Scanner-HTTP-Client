@@ -5,9 +5,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
-class SavedLinksViewModel(context: Context): ViewModel() {
+class SavedLinksViewModel(context: Context) : ViewModel() {
     // LiveData to hold the list of saved links
-    private val _sharedPreferences = context.getSharedPreferences("saved_links", Context.MODE_PRIVATE)
+    private val _sharedPreferences =
+        context.getSharedPreferences("saved_links", Context.MODE_PRIVATE)
     private val _savedLinks = MutableLiveData<List<String>>(emptyList())
     val savedLinks: LiveData<List<String>> = _savedLinks
 
@@ -29,7 +30,8 @@ class SavedLinksViewModel(context: Context): ViewModel() {
     }
 
     fun removeLink(link: String) {
-        val updatedList = _savedLinks.value.orEmpty() - link // The minus operator removes the link from the list
+        val updatedList =
+            _savedLinks.value.orEmpty() - link // The minus operator removes the link from the list
         _savedLinks.value = updatedList
         with(_sharedPreferences.edit()) {
             putStringSet("saved_links", updatedList.toSet())

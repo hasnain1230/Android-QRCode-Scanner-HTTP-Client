@@ -4,8 +4,10 @@ import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 class HttpProcessing {
@@ -19,7 +21,11 @@ class HttpProcessing {
             return qrCodeData.toRequestBody(mediaType)
         }
 
-        private fun buildRequest(settings: SettingsViewModel, qrCodeData: String, method: HttpEnum): Request {
+        private fun buildRequest(
+            settings: SettingsViewModel,
+            qrCodeData: String,
+            method: HttpEnum
+        ): Request {
             val url = if (settings.getRequestType().value == SettingsEnums.CONCATENATE) {
                 settings.getUrl().value.plus(qrCodeData)
             } else {
@@ -46,7 +52,10 @@ class HttpProcessing {
             }.build()
         }
 
-        suspend fun processHttp(settings: SettingsViewModel, qrCodeData: String): Pair<Int, String?> {
+        suspend fun processHttp(
+            settings: SettingsViewModel,
+            qrCodeData: String
+        ): Pair<Int, String?> {
             return withContext(Dispatchers.IO) {
                 val method: HttpEnum = settings.getSelectedHttpMethod().value
                 val request: Request = buildRequest(settings, qrCodeData, method)

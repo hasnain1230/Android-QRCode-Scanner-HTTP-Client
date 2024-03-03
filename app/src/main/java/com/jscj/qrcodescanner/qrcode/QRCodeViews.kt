@@ -83,7 +83,11 @@ class QRCodeViews {
                             text = annotatedText,
                             style = TextStyle(color = MaterialTheme.colorScheme.primary), // Set normal text color
                             onClick = { offset ->
-                                annotatedText.getStringAnnotations("URL", start = offset, end = offset)
+                                annotatedText.getStringAnnotations(
+                                    "URL",
+                                    start = offset,
+                                    end = offset
+                                )
                                     .firstOrNull()?.let { annotation ->
                                         Helper.openUrl(context, annotation.item)
                                     }
@@ -108,7 +112,10 @@ class QRCodeViews {
                 shape = RoundedCornerShape(size = 12.dp),
                 modifier = Modifier
                     .padding(6.dp)
-                    .background(MaterialTheme.colorScheme.surface, AbsoluteRoundedCornerShape(12.dp))
+                    .background(
+                        MaterialTheme.colorScheme.surface,
+                        AbsoluteRoundedCornerShape(12.dp)
+                    )
             )
         }
     }
