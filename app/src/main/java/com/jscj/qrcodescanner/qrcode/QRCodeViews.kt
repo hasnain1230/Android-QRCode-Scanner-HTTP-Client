@@ -21,7 +21,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.jscj.qrcodescanner.Helper
+import com.jscj.qrcodescanner.util.Helper
 import com.jscj.qrcodescanner.R
 
 class QRCodeViews {

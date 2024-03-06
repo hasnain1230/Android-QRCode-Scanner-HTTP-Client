@@ -1,4 +1,4 @@
-package com.jscj.qrcodescanner
+package com.jscj.qrcodescanner.util
 
 class Constants {
     companion object {

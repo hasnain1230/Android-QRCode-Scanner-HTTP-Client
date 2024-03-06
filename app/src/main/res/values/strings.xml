@@ -36,4 +36,12 @@
     <string name="delete_config_confirmation">Are you sure you want to delete the configuration \'%1$s\'?</string>
     <string name="url_required">URL Required</string>
     <string name="blank_url_error">Please enter a URL first, or select \"Read Mode.\"</string>
+    <string name="github_url">https://github.com/hasnain1230</string>
+    <string name="linkedin_url">https://www.linkedin.com/in/hasnain1230/</string>
+    <string name="email_address">hasnaincodes@gmail.com</string>
+    <string name="hiring_message">If you or your company is hiring for software-related positions, please feel free to reach out to me directly at:</string>
+    <string name="report_bugs">To report bugs or request features, please leave a review on the Play Store and I will address them as soon as possible.</string>
+    <string name="application_credits">This application was created by Hasnain Ali.</string>
+    <string name="email_address_link_color">#1976D2</string>
+    <string name="about_the_developer">About The Developer</string>
 </resources>
