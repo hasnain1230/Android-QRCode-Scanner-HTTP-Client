@@ -83,17 +83,48 @@ class SavedLinksUI(private val savedLinksViewModel: SavedLinksViewModel) {
                                 onNavigateBack()
                             }
                         }) {
-                            Icon(Icons.TwoTone.ArrowBack, contentDescription = if (isSelectionMode) "Close" else "Back")
+                            Icon(
+                                Icons.TwoTone.ArrowBack,
+                                contentDescription = if (isSelectionMode) "Close" else "Back"
+                            )
                         }
                     },
                     actions = {
                         if (isSelectionMode) {
+                            if (selectedLinks.size == savedLinksViewModel.savedLinks.value?.size) {
+                                IconButton(onClick = {
+                                    selectedLinks.clear()
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_deselect_24),
+                                        contentDescription = "Deselect All"
+                                    )
+                                }
+                            } else {
+                                IconButton(onClick = {
+                                    selectedLinks.clear()
+                                    savedLinksViewModel.savedLinks.value?.let {
+                                        selectedLinks.addAll(
+                                            it
+                                        )
+                                    }
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.twotone_select_all_24),
+                                        contentDescription = "Select All"
+                                    )
+                                }
+                            }
+
                             if (selectedLinks.isNotEmpty()) {
                                 IconButton(onClick = {
                                     savedLinksViewModel.removeLinks(selectedLinks)
                                     selectedLinks.clear()
                                 }) {
-                                    Icon(painter = painterResource(id = R.drawable.twotone_delete_24), contentDescription = "Delete Selected")
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.twotone_delete_24),
+                                        contentDescription = "Delete Selected"
+                                    )
                                 }
                             } else {
                                 IconButton(onClick = {
@@ -144,7 +175,11 @@ class SavedLinksUI(private val savedLinksViewModel: SavedLinksViewModel) {
                                     }
                                     savedLinksViewModel.addLink(newLink)
                                 } else {
-                                    Toast.makeText(context, "Link cannot be empty", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Link cannot be empty",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
 
                                 showDialog = false
@@ -176,7 +211,9 @@ class SavedLinksUI(private val savedLinksViewModel: SavedLinksViewModel) {
                             },
                             isSelected = link in selectedLinks,
                             onSelect = { isSelected ->
-                                if (isSelected) selectedLinks.add(link) else selectedLinks.remove(link)
+                                if (isSelected) selectedLinks.add(link) else selectedLinks.remove(
+                                    link
+                                )
                             },
                             isSelectionMode = isSelectionMode
                         )

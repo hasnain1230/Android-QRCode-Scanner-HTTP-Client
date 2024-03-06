@@ -1,19 +1,26 @@
 package com.jscj.qrcodescanner.settings
 
+import android.widget.Toast
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,22 +35,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.jscj.qrcodescanner.R
 import com.jscj.qrcodescanner.http.BodyTypes
 import com.jscj.qrcodescanner.http.HttpEnum
 
-class SettingsUI(private val settingsViewModel: SettingsViewModel) {
 
+// TODO: Hasnain, this entire UI needs to be rewritten using Preferences and Jetpack DataStore
+class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun SettingsScreen(onNavigateBack: () -> Unit) {
         var showUrlEmptyDialog by remember { mutableStateOf(false) }
+        val settingsScreenContext = LocalContext.current
 
         if (settingsViewModel.showUrlEmptyDialog.value) {
             ShowURLEmptyDialog(
-                showDialog = settingsViewModel.showUrlEmptyDialog.value,
                 onDismiss = { settingsViewModel.dismissDialog() }
             )
         }
@@ -60,7 +75,7 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
         MaterialTheme(
             typography = MaterialTheme.typography,
             shapes = MaterialTheme.shapes
-        )  {
+        ) {
             Scaffold(
                 topBar = {
                     TopAppBar(
@@ -72,8 +87,72 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                                     contentDescription = stringResource(R.string.back_button_content_descritption)
                                 )
                             }
+                        },
+                        actions = {
+                            val showConfigurationsDialog = remember { mutableStateOf(false) }
+
+                            IconButton(onClick = {
+                                showConfigurationsDialog.value = true
+                            }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.twotone_view_list_24),
+                                    contentDescription = stringResource(R.string.view_configurations)
+                                )
+                            }
+
+                            if (showConfigurationsDialog.value) {
+                                ShowConfigurationsDialog(
+                                    configurations = settingsViewModel.getSavedConfigurations(),
+                                    onDismiss = { showConfigurationsDialog.value = false }
+                                )
+                            }
                         }
                     )
+                },
+                floatingActionButton = {
+                    if (settingsViewModel.getCurrentMode().value == SettingsEnums.READ_MODE) {
+                        return@Scaffold
+                    }
+
+                    val showDialog = remember { mutableStateOf(false) }
+                    FloatingActionButton(onClick = {
+                        if (!settingsViewModel.isValidUrl()) {
+                            Toast.makeText(
+                                settingsScreenContext,
+                                settingsScreenContext.getString(R.string.url_is_required),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            showDialog.value = true
+                        }
+                    }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.twotone_save_24),
+                            contentDescription = stringResource(R.string.save_content_description)
+                        )
+
+                        if (showDialog.value) {
+                            SaveConfigDialog(
+                                onSave = {
+                                    if (settingsViewModel.saveConfiguration(it)) {
+                                        Toast.makeText(
+                                            settingsScreenContext,
+                                            settingsScreenContext.getString(R.string.configuration_saved),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        showDialog.value = false
+                                    } else {
+                                        Toast.makeText(
+                                            settingsScreenContext,
+                                            settingsScreenContext.getString(R.string.config_already_exists),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                },
+                                onDismiss = { showDialog.value = false }
+                            )
+                        }
+                    }
                 }
             ) {
                 Column(
@@ -85,13 +164,15 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                     Spacer(
                         Modifier
                             .width(16.dp)
-                            .padding(8.dp))
+                            .padding(8.dp)
+                    )
 
-                    ModeSelectionRow(currentMode = settingsViewModel.getCurrentMode().value, onModeChange = { settingsViewModel.setCurrentMode(it) })
+                    ModeSelectionRow(
+                        currentMode = settingsViewModel.getCurrentMode().value,
+                        onModeChange = { settingsViewModel.setCurrentMode(it) })
 
                     if (showUrlEmptyDialog) {
                         ShowURLEmptyDialog(
-                            showDialog = showUrlEmptyDialog,
                             onDismiss = { showUrlEmptyDialog = false }
                         )
                     }
@@ -99,9 +180,14 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                     if (settingsViewModel.getCurrentMode().value == SettingsEnums.HTTP_MODE) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(stringResource(R.string.select_http_method_text))
-                        Dropdown(selectedItem = settingsViewModel.getSelectedHttpMethod().value.toString(), HttpEnum.getListOfHttpMethodsAsString(), onMethodSelected = { settingsViewModel.setSelectedHttpMethod(it) })
+                        Dropdown(
+                            selectedItem = settingsViewModel.getSelectedHttpMethod().value.toString(),
+                            HttpEnum.getListOfHttpMethodsAsString(),
+                            onMethodSelected = { settingsViewModel.setSelectedHttpMethod(it) })
                         Spacer(modifier = Modifier.height(16.dp))
-                        UrlInputField(url = settingsViewModel.getUrl().value, onUrlChange = { settingsViewModel.setUrl(it) })
+                        UrlInputField(
+                            url = settingsViewModel.getUrl().value,
+                            onUrlChange = { settingsViewModel.setUrl(it) })
                         Spacer(modifier = Modifier.height(16.dp))
 
                         RequestTypeRadioButtons(requestType = settingsViewModel.getRequestType().value,
@@ -109,18 +195,198 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                             onRequestTypeChange = { settingsViewModel.setRequestType(it) })
 
                         if (settingsViewModel.getSelectedHttpMethod().value != HttpEnum.GET &&
-                            settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
+                            settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST
+                        ) {
                             // JSON, XML, Plain Text
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("Select Body Type")
-                            Dropdown(selectedItem = settingsViewModel.getSelectedBodyType().value.toString(), BodyTypes.getListOfBodyTypesAsString(), onMethodSelected = { settingsViewModel.setSelectedBodyType(it) })
+                            Text(stringResource(R.string.select_body_type))
+                            Dropdown(
+                                selectedItem = settingsViewModel.getSelectedBodyType().value.toString(),
+                                BodyTypes.getListOfBodyTypesAsString(),
+                                onMethodSelected = { settingsViewModel.setSelectedBodyType(it) })
 
+                        } else {
+                            settingsViewModel.setRequestType(SettingsEnums.CONCATENATE)
                         }
                     }
                 }
             }
         }
     }
+
+    @Composable
+    fun SaveConfigDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
+        var configName by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { onDismiss() },
+            title = { Text(stringResource(R.string.name_your_configuration)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.enter_config_name))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = configName,
+                        onValueChange = { configName = it },
+                        placeholder = { Text(stringResource(R.string.config_name)) }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onSave(configName.trim())
+                        configName = "" // Reset the text field after saving
+                    }
+                ) {
+                    Text(stringResource(R.string.save_text_button))
+                }
+            },
+            dismissButton = {
+                Button(onClick = { onDismiss() }) {
+                    Text(stringResource(R.string.cancel_text_button))
+                }
+            }
+        )
+    }
+
+    @Composable
+    fun ShowConfigurationsDialog(configurations: Map<String, Config>, onDismiss: () -> Unit) {
+        val configurationEntries = configurations.entries.toList()
+        val showDeleteConfirmationDialog = remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { onDismiss() },
+            title = { Text(stringResource(R.string.config_saved)) },
+            text = {
+                LazyColumn {
+                    items(
+                        count = configurationEntries.size,
+                        itemContent = { index ->
+                            val entry = configurationEntries[index]
+                            ConfigurationItem(
+                                name = entry.key,
+                                onClick = {
+                                    settingsViewModel.loadConfiguration(entry.key)
+                                    onDismiss()
+                                },
+                                onDelete = {
+                                    showDeleteConfirmationDialog.value = true
+                                }
+                            )
+                        }
+                    )
+                }
+            },
+
+            dismissButton = {
+                Button(onClick = { onDismiss() }) {
+                    Text(stringResource(R.string.close_text_button))
+                }
+            },
+
+            confirmButton = {}
+        )
+
+        if (showDeleteConfirmationDialog.value) {
+            ShowDeleteConfirmationDialog(
+                configurationName = configurationEntries[0].key,
+                onConfirm = {
+                    settingsViewModel.deleteConfiguration(configurationEntries[0].key)
+                    showDeleteConfirmationDialog.value = false
+                }
+            )
+        }
+    }
+
+    @Composable
+    fun ShowDeleteConfirmationDialog(configurationName: String, onConfirm: () -> Unit) {
+        val openDialog = remember { mutableStateOf(true) }
+
+        if (openDialog.value) {
+            AlertDialog(
+                onDismissRequest = { openDialog.value = false },
+                title = { Text(stringResource(R.string.delete_config)) },
+                text = { Text(stringResource(R.string.delete_config_confirmation, configurationName)) },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onConfirm()
+                            openDialog.value = false
+                        }
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { openDialog.value = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+    }
+
+    @Composable
+    fun ConfigurationItem(name: String, onClick: () -> Unit, onDelete: () -> Unit) {
+        var showMenu by remember { mutableStateOf(false) }
+        var dropDownMenuPosition by remember { mutableStateOf(Offset.Zero) }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    dropDownMenuPosition = coordinates.positionInWindow()
+                }
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = {
+                                showMenu = true
+                            },
+                            onTap = {
+                                onClick()
+                            }
+                        )
+                    }
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = name, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = {
+                    showMenu = false
+                },
+                offset = DpOffset(dropDownMenuPosition.x.dp, 0.dp)
+            ) {
+                DropdownMenuItem(
+                    onClick = {
+                        onDelete()
+                        showMenu = false
+                    },
+                    text = {
+                        Spacer(Modifier.width(8.dp))
+                        Text("Delete Configuration")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.twotone_delete_forever_24),
+                            contentDescription = "Delete Configuration",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                )
+            }
+        }
+    }
+
 
     @Composable
     fun ModeSelectionRow(currentMode: SettingsEnums, onModeChange: (SettingsEnums) -> Unit) {
@@ -143,25 +409,27 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     }
 
     @Composable
-    fun ShowURLEmptyDialog(showDialog: Boolean, onDismiss: () -> Unit) {
-        if (showDialog) {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                confirmButton = {
-                    Button(onClick = onDismiss) {
-                        Text("Okay")
-                    }
-                },
-                title = { Text("URL Required") },
-                text = { Text("Please enter a URL first, or select \"Read Mode.\"") }
-            )
-        }
+    fun ShowURLEmptyDialog(onDismiss: () -> Unit) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                Button(onClick = onDismiss) {
+                    Text("Okay")
+                }
+            },
+            title = { Text(stringResource(R.string.url_required)) },
+            text = { Text(stringResource(R.string.blank_url_error)) }
+        )
+
     }
 
 
-
     @Composable
-    fun Dropdown(selectedItem: String, dropDownItems: List<String>, onMethodSelected: (String) -> Unit) {
+    fun Dropdown(
+        selectedItem: String,
+        dropDownItems: List<String>,
+        onMethodSelected: (String) -> Unit
+    ) {
         var expanded by remember { mutableStateOf(false) }
 
         Column {
@@ -203,7 +471,11 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     }
 
     @Composable
-    fun RequestTypeRadioButtons(requestType: SettingsEnums, requestTypeList: List<SettingsEnums>, onRequestTypeChange: (SettingsEnums) -> Unit) {
+    fun RequestTypeRadioButtons(
+        requestType: SettingsEnums,
+        requestTypeList: List<SettingsEnums>,
+        onRequestTypeChange: (SettingsEnums) -> Unit
+    ) {
         Column {
             Text(stringResource(R.string.request_type_text))
             Row {

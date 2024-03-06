@@ -50,6 +50,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.navigation:navigation-compose:2.7.7")
     val cameraxVersion = "1.3.1"
     val zebraCrossingVersion = "4.3.0"
     val easyPermissionsVersion = "3.0.0"
@@ -57,8 +58,6 @@ dependencies {
 
 
     implementation("com.google.mlkit:vision-common:17.3.0")
-    implementation("androidx.wear.compose:compose-material:1.2.1")
-    implementation("androidx.navigation:navigation-compose:2.7.6")
     implementation("androidx.core:core-ktx:1.10.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation("androidx.activity:activity-compose:1.7.0")
@@ -74,6 +73,7 @@ dependencies {
     implementation("pub.devrel:easypermissions:$easyPermissionsVersion")
     implementation("com.squareup.okhttp3:okhttp:$okHttpVersion")
     implementation("androidx.compose.runtime:runtime-livedata:1.6.1")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

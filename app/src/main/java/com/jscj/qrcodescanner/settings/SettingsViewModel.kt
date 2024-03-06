@@ -5,19 +5,30 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.jscj.qrcodescanner.http.BodyTypes
 import com.jscj.qrcodescanner.http.HttpEnum
+import com.jscj.qrcodescanner.savedlinks.SavedLinksViewModel
 
-class SettingsViewModel(context: Context) : ViewModel() {
-    private val sharedPreferences: SharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE) // Private mode because we don't want other apps to access this data
+// TODO: Hasnain, this entire class needs to be refactored... Thinking too much like Java and not enough like Kotlin
 
+class SettingsViewModel(context: Context, savedLinksViewModel: SavedLinksViewModel) : ViewModel() {
+    private val _settingsSavedPreferences: SharedPreferences = context.getSharedPreferences(
+        "settings",
+        Context.MODE_PRIVATE
+    ) // Private mode because we don't want other apps to access this data
+
+    private val _savedLinksViewModel = savedLinksViewModel
+
+    private val _showUrlEmptyDialog = mutableStateOf(false)
+    private var _savedConfigurations = mutableStateOf<Map<String, Config>>(mapOf())
     private val possibleModes = SettingsEnums.getPossibleModes()
     private var currentMode = mutableStateOf(SettingsEnums.READ_MODE)
     private val possibleHttpMethods = HttpEnum.getListOfHttpMethods()
     private var selectedHttpMethod = mutableStateOf(HttpEnum.GET)
     private var url = mutableStateOf("")
     private val possibleRequestTypes = SettingsEnums.getPossibleRequestTypes()
-    private val _showUrlEmptyDialog = mutableStateOf(false)
     private var requestType = mutableStateOf(SettingsEnums.CONCATENATE)
     private var possibleBodyTypes = BodyTypes.getListOfBodyTypesAsString()
     private var selectedBodyType = mutableStateOf(BodyTypes.PLAIN_TEXT)
@@ -26,6 +37,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
     init {
         loadSettings()
+        loadConfigurations()
     }
 
     // Getters
@@ -43,7 +55,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
         }
 
         currentMode.value = mode
-        sharedPreferences.edit().putString("mode", mode.toString()).apply()
+        _settingsSavedPreferences.edit().putString("mode", mode.toString()).apply()
     }
 
     fun setSelectedHttpMethod(method: String) {
@@ -53,12 +65,16 @@ class SettingsViewModel(context: Context) : ViewModel() {
         }
 
         selectedHttpMethod.value = HttpEnum.fromString(method)
-        sharedPreferences.edit().putString("httpMethod", method).apply()
+        _settingsSavedPreferences.edit().putString("httpMethod", method).apply()
+    }
+
+    fun isValidUrl(): Boolean {
+        return url.value.isNotEmpty() && url.value.isNotBlank()
     }
 
     fun setUrl(url: String) {
         this.url.value = url
-        sharedPreferences.edit().putString("url", url).apply()
+        _settingsSavedPreferences.edit().putString("url", url).apply()
     }
 
     fun setRequestType(requestType: SettingsEnums) {
@@ -68,7 +84,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
         }
 
         this.requestType.value = requestType
-        sharedPreferences.edit().putString("requestType", requestType.toString()).apply()
+        _settingsSavedPreferences.edit().putString("requestType", requestType.toString()).apply()
     }
 
     fun setSelectedBodyType(bodyType: String) {
@@ -78,7 +94,7 @@ class SettingsViewModel(context: Context) : ViewModel() {
         }
 
         selectedBodyType.value = BodyTypes.fromString(bodyType)
-        sharedPreferences.edit().putString("bodyType", bodyType).apply()
+        _settingsSavedPreferences.edit().putString("bodyType", bodyType).apply()
     }
 
     fun getAllowedRequestTypes(): List<SettingsEnums> {
@@ -97,12 +113,75 @@ class SettingsViewModel(context: Context) : ViewModel() {
         _showUrlEmptyDialog.value = false
     }
 
+    private fun saveConfigurationsMap(key: String, map: Map<String, Config>) {
+        val gson = Gson()
+        val json = gson.toJson(map)
+        _settingsSavedPreferences.edit().putString(key, json).apply()
+    }
+
+    private fun loadConfigurationsMap(key: String): Map<String, Config>? {
+        val gson = Gson()
+        val json = _settingsSavedPreferences.getString(key, null) //
+        val type = object : TypeToken<Map<String, Config>>() {}.type
+        return gson.fromJson(json, type)
+    }
+
+    fun saveConfiguration(name: String): Boolean {
+        val config = Config(
+            _configName = name,
+            currentMode = currentMode.value,
+            selectedHttpMethod = selectedHttpMethod.value,
+            url = url.value,
+            requestType = requestType.value,
+            bodyTypes = selectedBodyType.value,
+            savedLinks = _savedLinksViewModel.savedLinks.value
+        )
+
+        // First check if the configuration already exists
+        return if (_savedConfigurations.value.containsKey(name)) {
+            false
+        } else {
+            _savedConfigurations.value += name to config
+            saveConfigurationsMap("configurations", _savedConfigurations.value)
+            true
+        }
+    }
+
+    fun getSavedConfigurations(): Map<String, Config> {
+        return _savedConfigurations.value
+    }
+
+    fun deleteConfiguration(configName: String) {
+        _savedConfigurations.value -= configName
+        saveConfigurationsMap("configurations", _savedConfigurations.value)
+    }
+
+    fun deleteConfigurations(configNames: List<String>) {
+        configNames.forEach { configName ->
+            _savedConfigurations.value -= configName
+        }
+
+        saveConfigurationsMap("configurations", _savedConfigurations.value)
+    }
+
+    fun loadConfiguration(configName: String) {
+        val config = _savedConfigurations.value[configName]
+        if (config != null) {
+            setCurrentMode(config.currentMode)
+            setSelectedHttpMethod(config.selectedHttpMethod.toString())
+            setUrl(config.url)
+            setRequestType(config.requestType)
+            setSelectedBodyType(config.bodyTypes.toString())
+            _savedLinksViewModel.setLinks(config.savedLinks.orEmpty())
+        }
+    }
+
     private fun loadSettings() {
-        val mode: String? = sharedPreferences.getString("mode", "Read Mode")
-        val httpMethod: String? = sharedPreferences.getString("httpMethod", null)
-        val url: String? = sharedPreferences.getString("url", null)
-        val requestType: String? = sharedPreferences.getString("requestType", null)
-        val bodyType: String? = sharedPreferences.getString("bodyType", null)
+        val mode: String? = _settingsSavedPreferences.getString("mode", "Read Mode")
+        val httpMethod: String? = _settingsSavedPreferences.getString("httpMethod", null)
+        val url: String? = _settingsSavedPreferences.getString("url", null)
+        val requestType: String? = _settingsSavedPreferences.getString("requestType", null)
+        val bodyType: String? = _settingsSavedPreferences.getString("bodyType", null)
 
         setCurrentMode(SettingsEnums.fromString(mode!!))
 
@@ -120,6 +199,13 @@ class SettingsViewModel(context: Context) : ViewModel() {
 
         if (bodyType != null) {
             setSelectedBodyType(bodyType)
+        }
+    }
+
+    private fun loadConfigurations() {
+        val configurations = loadConfigurationsMap("configurations")
+        if (!configurations.isNullOrEmpty()) {
+            _savedConfigurations.value = configurations
         }
     }
 }

@@ -7,6 +7,7 @@
     <string name="settings_clicked">Settings Clicked</string> <!--TODO: Remove-->
     <string name="settings">Settings</string>
     <string name="link_hex_color_code">#2196F3</string>
+    <string name="edit_green_hex">#21614f</string>
     <string name="scanned_qr_code">Scanned QR Code</string>
     <string name="okay_button_text">Okay</string>
     <string name="camera_permission_denied">Camera permissions have been denied. The application will not work correctly.</string>
@@ -18,4 +19,21 @@
     <string name="url_label_text">URL</string>
     <string name="request_type_text">Request Type</string>
     <string name="saved_links">Saved links</string>
+    <string name="select_body_type">Select Body Type</string>
+    <string name="view_configurations">View Configurations</string>
+    <string name="url_is_required">URL is required</string>
+    <string name="save_content_description">Save</string>
+    <string name="configuration_saved">Configuration saved</string>
+    <string name="config_already_exists">Configuration with that name already exists</string>
+    <string name="name_your_configuration">Name Your Configuration</string>
+    <string name="enter_config_name">Please enter the name you would like to use for your current configuration.</string>
+    <string name="config_name">Configuration Name</string>
+    <string name="save_text_button">Save</string>
+    <string name="cancel_text_button">Cancel</string>
+    <string name="config_saved">Saved Configurations</string>
+    <string name="close_text_button">Close</string>
+    <string name="delete_config">Delete Configuration</string>
+    <string name="delete_config_confirmation">Are you sure you want to delete the configuration \'%1$s\'?</string>
+    <string name="url_required">URL Required</string>
+    <string name="blank_url_error">Please enter a URL first, or select \"Read Mode.\"</string>
 </resources>
