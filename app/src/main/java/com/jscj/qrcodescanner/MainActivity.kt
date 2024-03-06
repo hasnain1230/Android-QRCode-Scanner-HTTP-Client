@@ -70,18 +70,18 @@ class MainActivity : ComponentActivity(), EasyPermissions.PermissionCallbacks {
         val navController = rememberNavController()
         val context: Context = LocalContext.current
 
-        val settingsViewModel: SettingsViewModel = viewModel(
-            factory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SettingsViewModel(context) as T
-                }
-            }
-        )
-
         val savedLinksViewModel: SavedLinksViewModel = viewModel(
             factory = object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return SavedLinksViewModel(context) as T
+                }
+            }
+        )
+
+        val settingsViewModel: SettingsViewModel = viewModel(
+            factory = object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return SettingsViewModel(context, savedLinksViewModel) as T
                 }
             }
         )

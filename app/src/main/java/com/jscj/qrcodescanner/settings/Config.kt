@@ -10,8 +10,9 @@ class Config(
     val selectedHttpMethod: HttpEnum,
     val url: String,
     val requestType: SettingsEnums,
-    val bodyTypes: BodyTypes? = null
-) {
+    val bodyTypes: BodyTypes? = null,
+    val savedLinks: List<String>? = mutableListOf(),
+    ) {
     // toString method to display the configuration
     override fun toString(): String {
         return JSONObject().apply {
@@ -21,6 +22,7 @@ class Config(
             put("url", url)
             put("requestType", requestType)
             put("bodyTypes", bodyTypes)
+            put("savedLinks", savedLinks)
         }.toString(4)
     }
 }

@@ -15,8 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -72,7 +73,9 @@ class QRCodeViews {
                             )
                             addStyle(
                                 style = SpanStyle(
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = Color(android.graphics.Color.parseColor(stringResource(
+                                        id = R.string.link_hex_color_code
+                                    ))),
                                     textDecoration = TextDecoration.Underline
                                 ),
                                 start = startIndex,
@@ -81,16 +84,14 @@ class QRCodeViews {
                         }
                         ClickableText(
                             text = annotatedText,
-                            style = TextStyle(color = MaterialTheme.colorScheme.primary), // Set normal text color
                             onClick = { offset ->
                                 annotatedText.getStringAnnotations(
                                     "URL",
-                                    start = offset,
+                                    start = offset, // Find URLs at the specific character the user clicked (in this case, they will always be within the URL)
                                     end = offset
-                                )
-                                    .firstOrNull()?.let { annotation ->
-                                        Helper.openUrl(context, annotation.item)
-                                    }
+                                ).firstOrNull()?.let { annotation ->
+                                    Helper.openUrl(context, annotation.item)
+                                }
                             }
                         )
                     } else {

@@ -49,6 +49,14 @@ class SavedLinksViewModel(context: Context) : ViewModel() {
         }
     }
 
+    fun setLinks(links: List<String>) {
+        _savedLinks.value = links
+        with(_sharedPreferences.edit()) {
+            putStringSet("saved_links", links.toSet())
+            apply()
+        }
+    }
+
     // Function to load saved links from persistent storage
     private fun loadSavedLinks() {
         // Load the links from SharedPreferences or another storage solution

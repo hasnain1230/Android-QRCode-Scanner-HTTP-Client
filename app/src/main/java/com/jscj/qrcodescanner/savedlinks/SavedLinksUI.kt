@@ -91,6 +91,31 @@ class SavedLinksUI(private val savedLinksViewModel: SavedLinksViewModel) {
                     },
                     actions = {
                         if (isSelectionMode) {
+                            if (selectedLinks.size == savedLinksViewModel.savedLinks.value?.size) {
+                                IconButton(onClick = {
+                                    selectedLinks.clear()
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_deselect_24),
+                                        contentDescription = "Deselect All"
+                                    )
+                                }
+                            } else {
+                                IconButton(onClick = {
+                                    selectedLinks.clear()
+                                    savedLinksViewModel.savedLinks.value?.let {
+                                        selectedLinks.addAll(
+                                            it
+                                        )
+                                    }
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.twotone_select_all_24),
+                                        contentDescription = "Select All"
+                                    )
+                                }
+                            }
+
                             if (selectedLinks.isNotEmpty()) {
                                 IconButton(onClick = {
                                     savedLinksViewModel.removeLinks(selectedLinks)

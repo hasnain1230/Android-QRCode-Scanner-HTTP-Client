@@ -35,7 +35,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -44,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import com.jscj.qrcodescanner.R
 import com.jscj.qrcodescanner.http.BodyTypes
 import com.jscj.qrcodescanner.http.HttpEnum
-import kotlin.math.abs
 
 
 // TODO: Hasnain, this entire UI needs to be rewritten using Preferences and Jetpack DataStore
@@ -94,7 +96,7 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                             }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.twotone_view_list_24),
-                                    contentDescription = "View Configurations"
+                                    contentDescription = stringResource(R.string.view_configurations)
                                 )
                             }
 
@@ -117,7 +119,7 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                         if (!settingsViewModel.isValidUrl()) {
                             Toast.makeText(
                                 settingsScreenContext,
-                                "URL is required",
+                                settingsScreenContext.getString(R.string.url_is_required),
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
@@ -126,7 +128,7 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                     }) {
                         Icon(
                             painter = painterResource(id = R.drawable.twotone_save_24),
-                            contentDescription = "Save"
+                            contentDescription = stringResource(R.string.save_content_description)
                         )
 
                         if (showDialog.value) {
@@ -135,14 +137,14 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                                     if (settingsViewModel.saveConfiguration(it)) {
                                         Toast.makeText(
                                             settingsScreenContext,
-                                            "Configuration saved",
+                                            settingsScreenContext.getString(R.string.configuration_saved),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                         showDialog.value = false
                                     } else {
                                         Toast.makeText(
                                             settingsScreenContext,
-                                            "Configuration with that name already exists",
+                                            settingsScreenContext.getString(R.string.config_already_exists),
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -218,15 +220,15 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
 
         AlertDialog(
             onDismissRequest = { onDismiss() },
-            title = { Text("Name Your Configuration") },
+            title = { Text(stringResource(R.string.name_your_configuration)) },
             text = {
                 Column {
-                    Text("Please the name you would like to use for your current configuration.")
+                    Text(stringResource(R.string.enter_config_name))
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = configName,
                         onValueChange = { configName = it },
-                        placeholder = { Text("Configuration Name") }
+                        placeholder = { Text(stringResource(R.string.config_name)) }
                     )
                 }
             },
@@ -237,12 +239,12 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                         configName = "" // Reset the text field after saving
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.save_text_button))
                 }
             },
             dismissButton = {
                 Button(onClick = { onDismiss() }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel_text_button))
                 }
             }
         )
@@ -251,10 +253,11 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     @Composable
     fun ShowConfigurationsDialog(configurations: Map<String, Config>, onDismiss: () -> Unit) {
         val configurationEntries = configurations.entries.toList()
+        val showDeleteConfirmationDialog = remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { onDismiss() },
-            title = { Text("Saved Configurations") },
+            title = { Text(stringResource(R.string.config_saved)) },
             text = {
                 LazyColumn {
                     items(
@@ -268,76 +271,121 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                                     onDismiss()
                                 },
                                 onDelete = {
-                                    settingsViewModel.deleteConfiguration(entry.key)
+                                    showDeleteConfirmationDialog.value = true
                                 }
                             )
                         }
                     )
                 }
             },
-            confirmButton = {
+
+            dismissButton = {
                 Button(onClick = { onDismiss() }) {
-                    Text("Close")
+                    Text(stringResource(R.string.close_text_button))
                 }
-            }
-        )
-    }
-
-
-    @Composable
-    fun ConfigurationItem(name: String, onClick: () -> Unit, onDelete: () -> Unit) {
-        var showMenu by remember { mutableStateOf(false) }
-        var dropDownMenuPosition by remember { mutableStateOf(DpOffset.Zero) }
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = { offset ->
-                            val xPos = abs((offset.x.toDp()).value).toDp()
-                            dropDownMenuPosition = DpOffset(xPos, 0.dp)
-                            showMenu = true
-                        },
-                        onTap = {
-                            onClick()
-                        }
-                    )
-                }
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = name, style = MaterialTheme.typography.titleMedium)
-            }
-        }
-
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = {
-                showMenu = false
             },
-            offset = dropDownMenuPosition
-        ) {
-            DropdownMenuItem(
-                onClick = {
-                    onDelete()
-                    showMenu = false
-                },
-                text = {
-                    Spacer(Modifier.width(8.dp))
-                    Text("Delete Configuration")
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.twotone_delete_forever_24), // Replace with your delete icon asset
-                        contentDescription = "Delete Configuration",
-                        modifier = Modifier.size(24.dp)
-                    )
+
+            confirmButton = {}
+        )
+
+        if (showDeleteConfirmationDialog.value) {
+            ShowDeleteConfirmationDialog(
+                configurationName = configurationEntries[0].key,
+                onConfirm = {
+                    settingsViewModel.deleteConfiguration(configurationEntries[0].key)
+                    showDeleteConfirmationDialog.value = false
                 }
             )
         }
     }
 
+    @Composable
+    fun ShowDeleteConfirmationDialog(configurationName: String, onConfirm: () -> Unit) {
+        val openDialog = remember { mutableStateOf(true) }
+
+        if (openDialog.value) {
+            AlertDialog(
+                onDismissRequest = { openDialog.value = false },
+                title = { Text(stringResource(R.string.delete_config)) },
+                text = { Text(stringResource(R.string.delete_config_confirmation, configurationName)) },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onConfirm()
+                            openDialog.value = false
+                        }
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { openDialog.value = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+    }
+
+    @Composable
+    fun ConfigurationItem(name: String, onClick: () -> Unit, onDelete: () -> Unit) {
+        var showMenu by remember { mutableStateOf(false) }
+        var dropDownMenuPosition by remember { mutableStateOf(Offset.Zero) }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    dropDownMenuPosition = coordinates.positionInWindow()
+                }
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = {
+                                showMenu = true
+                            },
+                            onTap = {
+                                onClick()
+                            }
+                        )
+                    }
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = name, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = {
+                    showMenu = false
+                },
+                offset = DpOffset(dropDownMenuPosition.x.dp, 0.dp)
+            ) {
+                DropdownMenuItem(
+                    onClick = {
+                        onDelete()
+                        showMenu = false
+                    },
+                    text = {
+                        Spacer(Modifier.width(8.dp))
+                        Text("Delete Configuration")
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.twotone_delete_forever_24),
+                            contentDescription = "Delete Configuration",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                )
+            }
+        }
+    }
 
 
     @Composable
@@ -369,8 +417,8 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                     Text("Okay")
                 }
             },
-            title = { Text("URL Required") },
-            text = { Text("Please enter a URL first, or select \"Read Mode.\"") }
+            title = { Text(stringResource(R.string.url_required)) },
+            text = { Text(stringResource(R.string.blank_url_error)) }
         )
 
     }
