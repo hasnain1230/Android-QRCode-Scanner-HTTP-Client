@@ -27,6 +27,7 @@ import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsUI
 import com.jscj.qrcodescanner.settings.SettingsViewModel
 import com.jscj.qrcodescanner.ui.theme.JSCJQRCodeScannerTheme
+import com.jscj.qrcodescanner.util.Constants
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 

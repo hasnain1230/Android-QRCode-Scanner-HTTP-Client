@@ -52,13 +52,14 @@ import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.Result
 import com.google.zxing.ResultPoint
-import com.jscj.qrcodescanner.Constants
+import com.jscj.qrcodescanner.AboutAlertIconButton
 import com.jscj.qrcodescanner.R
 import com.jscj.qrcodescanner.http.HttpProcessing.Companion.processHttp
 import com.jscj.qrcodescanner.qrcode.QRCodeViews
 import com.jscj.qrcodescanner.qrcode.scanQRCode
 import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsViewModel
+import com.jscj.qrcodescanner.util.Constants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -123,6 +124,9 @@ class CameraPreviewInitializer(
                     SettingsButton(modifier = Modifier.padding(4.dp))
                 }
             }
+
+            // About Button
+            AboutAlertIconButton(modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
 
 
             ScanningAreaBox(modifier = Modifier

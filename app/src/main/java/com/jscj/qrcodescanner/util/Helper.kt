@@ -1,4 +1,4 @@
-package com.jscj.qrcodescanner
+package com.jscj.qrcodescanner.util
 
 import android.content.Context
 import android.content.Intent
