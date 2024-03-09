@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -293,40 +294,40 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
         if (showDeleteConfirmationDialog.value) {
             ShowDeleteConfirmationDialog(
                 configurationName = selectedConfiguration.value,
+                showDeleteConfirmationDialog = showDeleteConfirmationDialog,
                 onConfirm = {
                     settingsViewModel.deleteConfiguration(selectedConfiguration.value)
-                    showDeleteConfirmationDialog.value = false
                 }
             )
         }
     }
 
     @Composable
-    fun ShowDeleteConfirmationDialog(configurationName: String, onConfirm: () -> Unit) {
-        val openDialog = remember { mutableStateOf(true) }
-
-        if (openDialog.value) {
-            AlertDialog(
-                onDismissRequest = { openDialog.value = false },
-                title = { Text(stringResource(R.string.delete_config)) },
-                text = { Text(stringResource(R.string.delete_config_confirmation, configurationName)) },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            onConfirm()
-                            openDialog.value = false
-                        }
-                    ) {
-                        Text("Delete")
+    fun ShowDeleteConfirmationDialog(
+        configurationName: String,
+        showDeleteConfirmationDialog: MutableState<Boolean>,
+        onConfirm: () -> Unit
+    ) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmationDialog.value = false },
+            title = { Text(stringResource(R.string.delete_config)) },
+            text = { Text(stringResource(R.string.delete_config_confirmation, configurationName)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onConfirm()
+                        showDeleteConfirmationDialog.value = false
                     }
-                },
-                dismissButton = {
-                    Button(onClick = { openDialog.value = false }) {
-                        Text("Cancel")
-                    }
+                ) {
+                    Text("Delete")
                 }
-            )
-        }
+            },
+            dismissButton = {
+                Button(onClick = { showDeleteConfirmationDialog.value = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     @Composable
