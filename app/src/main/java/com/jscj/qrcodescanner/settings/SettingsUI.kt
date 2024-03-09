@@ -254,6 +254,7 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
     fun ShowConfigurationsDialog(configurations: Map<String, Config>, onDismiss: () -> Unit) {
         val configurationEntries = configurations.entries.toList()
         val showDeleteConfirmationDialog = remember { mutableStateOf(false) }
+        val selectedConfiguration = remember { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = { onDismiss() },
@@ -272,6 +273,7 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
                                 },
                                 onDelete = {
                                     showDeleteConfirmationDialog.value = true
+                                    selectedConfiguration.value = entry.key
                                 }
                             )
                         }
@@ -290,9 +292,9 @@ class SettingsUI(private val settingsViewModel: SettingsViewModel) {
 
         if (showDeleteConfirmationDialog.value) {
             ShowDeleteConfirmationDialog(
-                configurationName = configurationEntries[0].key,
+                configurationName = selectedConfiguration.value,
                 onConfirm = {
-                    settingsViewModel.deleteConfiguration(configurationEntries[0].key)
+                    settingsViewModel.deleteConfiguration(selectedConfiguration.value)
                     showDeleteConfirmationDialog.value = false
                 }
             )
