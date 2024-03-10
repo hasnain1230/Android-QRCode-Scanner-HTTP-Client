@@ -14,6 +14,12 @@ class Helper {
             context.startActivity(intent)
         }
 
+        fun emailAddress(context: Context, emailAddress: String) {
+            val intent = Intent(Intent.ACTION_SENDTO)
+            intent.data = Uri.parse("mailto:$emailAddress")
+            context.startActivity(intent)
+        }
+
         fun playSound(context: Context, resId: Int) {
             val mediaPlayer = MediaPlayer.create(context, resId)
             mediaPlayer.start()
