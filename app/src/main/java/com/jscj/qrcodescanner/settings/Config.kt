@@ -12,7 +12,7 @@ class Config(
     val requestType: SettingsEnums,
     val bodyTypes: BodyTypes? = null,
     val savedLinks: List<String>? = mutableListOf(),
-    ) {
+) {
     // toString method to display the configuration
     override fun toString(): String {
         return JSONObject().apply {

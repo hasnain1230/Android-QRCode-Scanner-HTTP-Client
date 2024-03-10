@@ -135,7 +135,10 @@ fun AboutAlertDialog(showDialog: MutableState<Boolean>, context: Context = Local
                 ) {
                     Text(
                         text = "Okay",
-                        style = TextStyle(fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     )
                 }
             }

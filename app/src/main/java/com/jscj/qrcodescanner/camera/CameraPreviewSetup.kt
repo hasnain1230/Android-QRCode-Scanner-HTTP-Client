@@ -1,12 +1,14 @@
 package com.jscj.qrcodescanner.camera
 
 import android.content.Context
+import android.graphics.PointF
 import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
@@ -15,6 +17,7 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -41,6 +44,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -70,6 +74,22 @@ class CameraPreviewInitializer(
     private val navController: NavController,
     private val settingsViewModel: SettingsViewModel
 ) {
+    private fun focusCamera(
+        cameraControl: CameraControl?,
+        focusPoint: PointF,
+        previewView: PreviewView
+    ) {
+        cameraControl?.let { control ->
+            val meteringPointFactory = previewView.meteringPointFactory
+            val meteringPoint = meteringPointFactory.createPoint(focusPoint.x, focusPoint.y)
+            val focusAction =
+                FocusMeteringAction.Builder(meteringPoint, FocusMeteringAction.FLAG_AF)
+                    .setAutoCancelDuration(3, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+            control.startFocusAndMetering(focusAction)
+        }
+    }
+
     @Composable
     fun CameraPreview() {
         val context = LocalContext.current
@@ -83,12 +103,9 @@ class CameraPreviewInitializer(
         val titleText = remember { mutableStateOf<String?>(null) }
         val bodyText = remember { mutableStateOf<String?>(null) }
         val showPopup = remember { mutableStateOf(false) }
-        var bindCamera: MutableState<(() -> Unit)?>
 
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val scanBoxSize = maxWidth * Constants.SCAN_AREA_MULTIPLIER
-
-            bindCamera = cameraSetup(
+        val cameraBindData: Pair<PreviewView, MutableState<(() -> Unit)?>> =
+            cameraSetup( // We bind the camera right away so that the camera data can be accessed by other components like the autofocus function
                 context,
                 scanner,
                 cameraControl,
@@ -97,6 +114,18 @@ class CameraPreviewInitializer(
                 qrCodeData,
                 isScanning
             )
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val focusPoint = PointF(offset.x, offset.y)
+                        focusCamera(cameraControl.value, focusPoint, cameraBindData.first)
+                    }
+                }
+        ) {
+            val scanBoxSize = maxWidth * Constants.SCAN_AREA_MULTIPLIER
 
             TranslucentBackground(
                 modifier = Modifier
@@ -126,7 +155,11 @@ class CameraPreviewInitializer(
             }
 
             // About Button
-            AboutAlertIconButton(modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
+            AboutAlertIconButton(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(12.dp)
+            )
 
 
             ScanningAreaBox(modifier = Modifier
@@ -202,7 +235,7 @@ class CameraPreviewInitializer(
                     bodyText = bodyText.value!!,
                     showDialog = showPopup,
                     qrCodeBounds = qrCodeBounds,
-                    rebindCamera = bindCamera.value!!
+                    rebindCamera = cameraBindData.second.value!!
                 )
             }
         }
@@ -221,19 +254,18 @@ class CameraPreviewInitializer(
         cameraInfo: MutableState<CameraInfo?>,
         qrCodeBounds: MutableState<Rect?>,
         qrCodeData: MutableState<String?>,
-        isScanning: MutableState<Boolean>
-    ): MutableState<(() -> Unit)?> {
-
+        isScanning: MutableState<Boolean>,
+    ): Pair<PreviewView, MutableState<(() -> Unit)?>> {
         val bindCamera = remember { mutableStateOf<(() -> Unit)?>(null) }
+        val previewView = remember { mutableStateOf(PreviewView(context)) }
 
         AndroidView(
             factory = { ctx ->
-                val previewView = PreviewView(ctx)
                 val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
                 cameraProviderFuture.addListener({
                     val cameraProvider = cameraProviderFuture.get()
                     val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
+                        it.setSurfaceProvider(previewView.value.surfaceProvider)
                     }
 
                     val imageAnalysis = ImageAnalysis.Builder().build().also {
@@ -251,7 +283,7 @@ class CameraPreviewInitializer(
                                 isScanning = isScanning,
                                 qrCodeData = qrCodeData,
                                 qrCodeBounds = qrCodeBounds,
-                                previewView = previewView,
+                                previewView = previewView.value,
                                 cameraProvider = cameraProvider
                             )
 
@@ -279,12 +311,15 @@ class CameraPreviewInitializer(
 
                     bindCamera.value?.invoke()
                 }, ContextCompat.getMainExecutor(ctx))
-                previewView
+                previewView.value
 
-            }, modifier = Modifier.fillMaxSize()
+            }, modifier = Modifier.fillMaxSize(),
+            update = { view ->
+                previewView.value = view
+            }
         )
 
-        return bindCamera
+        return Pair(previewView.value, bindCamera)
     }
 
     @Composable

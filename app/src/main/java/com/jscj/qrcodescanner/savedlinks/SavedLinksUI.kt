@@ -49,8 +49,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.jscj.qrcodescanner.util.Helper
 import com.jscj.qrcodescanner.R
+import com.jscj.qrcodescanner.util.Helper
 import kotlin.math.abs
 
 class SavedLinksUI(private val savedLinksViewModel: SavedLinksViewModel) {

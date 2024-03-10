@@ -21,8 +21,8 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.jscj.qrcodescanner.util.Helper
 import com.jscj.qrcodescanner.R
+import com.jscj.qrcodescanner.util.Helper
 
 class QRCodeViews {
     companion object {
@@ -73,9 +73,13 @@ class QRCodeViews {
                             )
                             addStyle(
                                 style = SpanStyle(
-                                    color = Color(android.graphics.Color.parseColor(stringResource(
-                                        id = R.string.link_hex_color_code
-                                    ))),
+                                    color = Color(
+                                        android.graphics.Color.parseColor(
+                                            stringResource(
+                                                id = R.string.link_hex_color_code
+                                            )
+                                        )
+                                    ),
                                     textDecoration = TextDecoration.Underline
                                 ),
                                 start = startIndex,

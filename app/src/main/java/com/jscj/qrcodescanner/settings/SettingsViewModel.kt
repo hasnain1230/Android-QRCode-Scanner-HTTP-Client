@@ -122,7 +122,8 @@ class SettingsViewModel(context: Context, savedLinksViewModel: SavedLinksViewMod
     private fun loadConfigurationsMap(key: String): Map<String, Config>? {
         val gson = Gson()
         val json = _settingsSavedPreferences.getString(key, null) //
-        val type = object : TypeToken<Map<String, Config>>() {}.type // Create an anonymous object that extends TypeToken of Map<String, Config>. Then we get the type of that object
+        val type = object :
+            TypeToken<Map<String, Config>>() {}.type // Create an anonymous object that extends TypeToken of Map<String, Config>. Then we get the type of that object
         return gson.fromJson(json, type)
     }
 
