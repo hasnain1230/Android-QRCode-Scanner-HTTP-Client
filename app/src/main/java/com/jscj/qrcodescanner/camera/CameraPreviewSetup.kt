@@ -14,6 +14,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -58,10 +61,8 @@ import com.google.zxing.Result
 import com.google.zxing.ResultPoint
 import com.jscj.qrcodescanner.AboutAlertIconButton
 import com.jscj.qrcodescanner.R
-import com.jscj.qrcodescanner.http.HttpProcessing.Companion.processHttp
 import com.jscj.qrcodescanner.qrcode.QRCodeViews
 import com.jscj.qrcodescanner.qrcode.scanQRCode
-import com.jscj.qrcodescanner.settings.SettingsEnums
 import com.jscj.qrcodescanner.settings.SettingsViewModel
 import com.jscj.qrcodescanner.util.Constants
 import kotlinx.coroutines.CoroutineScope
@@ -71,21 +72,19 @@ import kotlinx.coroutines.launch
 import java.util.EnumMap
 
 class CameraPreviewInitializer(
-    private val navController: NavController,
-    private val settingsViewModel: SettingsViewModel
+    private val navController: NavController, private val settingsViewModel: SettingsViewModel
 ) {
     private fun focusCamera(
-        cameraControl: CameraControl?,
-        focusPoint: PointF,
-        previewView: PreviewView
+        cameraControl: CameraControl?, focusPoint: PointF, previewView: PreviewView
     ) {
         cameraControl?.let { control ->
             val meteringPointFactory = previewView.meteringPointFactory
             val meteringPoint = meteringPointFactory.createPoint(focusPoint.x, focusPoint.y)
             val focusAction =
                 FocusMeteringAction.Builder(meteringPoint, FocusMeteringAction.FLAG_AF)
-                    .setAutoCancelDuration(3, java.util.concurrent.TimeUnit.SECONDS)
-                    .build()
+                    .setAutoCancelDuration(
+                        Constants.FOCUS_AUTO_CANCEL_SECONDS, java.util.concurrent.TimeUnit.SECONDS
+                    ).build()
             control.startFocusAndMetering(focusAction)
         }
     }
@@ -100,31 +99,29 @@ class CameraPreviewInitializer(
         val qrCodeData = remember { mutableStateOf<String?>(null) }
         val isFlashOn = remember { mutableStateOf(false) }
         val isScanning = remember { mutableStateOf(false) }
+        val qrCodeViews = QRCodeViews()
         val titleText = remember { mutableStateOf<String?>(null) }
+        val titleColor = remember { mutableStateOf<Color?>(null) }
         val bodyText = remember { mutableStateOf<String?>(null) }
+        val success = remember { mutableStateOf(false) }
         val showPopup = remember { mutableStateOf(false) }
+        val focusPoint = remember { mutableStateOf<PointF?>(null) }
+        val showFocusCircle = remember { mutableStateOf(false) }
 
         val cameraBindData: Pair<PreviewView, MutableState<(() -> Unit)?>> =
             cameraSetup( // We bind the camera right away so that the camera data can be accessed by other components like the autofocus function
-                context,
-                scanner,
-                cameraControl,
-                cameraInfo,
-                qrCodeBounds,
-                qrCodeData,
-                isScanning
+                context, scanner, cameraControl, cameraInfo, qrCodeBounds, qrCodeData, isScanning
             )
 
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val focusPoint = PointF(offset.x, offset.y)
-                        focusCamera(cameraControl.value, focusPoint, cameraBindData.first)
-                    }
+        BoxWithConstraints(modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    focusPoint.value = PointF(offset.x, offset.y)
+                    showFocusCircle.value = true
+                    focusCamera(cameraControl.value, focusPoint.value!!, cameraBindData.first)
                 }
-        ) {
+            }) {
             val scanBoxSize = maxWidth * Constants.SCAN_AREA_MULTIPLIER
 
             TranslucentBackground(
@@ -179,63 +176,53 @@ class CameraPreviewInitializer(
 
             DrawBoundingBox(qrCodeBounds)
 
-
-            qrCodeData.value?.let {
-                settingsViewModel.getCurrentMode().value.let { mode ->
-                    if (mode == SettingsEnums.READ_MODE) {
-                        titleText.value = "Scanned QR Code"
-                        bodyText.value = qrCodeData.value
-                        showPopup.value = true
-                    } else if (mode == SettingsEnums.HTTP_MODE) {
-                        LaunchedEffect(qrCodeData.value) {
-                            val result: Pair<Int, String?> = try {
-                                processHttp(
-                                    settings = settingsViewModel,
-                                    qrCodeData = qrCodeData.value!!
-                                )
-                            } catch (e: Exception) {
-                                Pair(-1, e.message)
-                            }
-
-                            val responseCode = result.first
-                            val responseBody = result.second
-
-                            titleText.value = if (responseCode in 200..299) {
-                                "${settingsViewModel.getSelectedHttpMethod().value} Request Successful"
-                            } else {
-                                "Error - ${settingsViewModel.getSelectedHttpMethod().value} Request Failed"
-                            }
-
-
-
-                            bodyText.value =
-                                if (responseCode in 200..299 && settingsViewModel.getRequestType().value == SettingsEnums.CONCATENATE) {
-                                    "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${
-                                        settingsViewModel.getUrl().value.plus(
-                                            qrCodeData.value
-                                        )
-                                    }\n\nResponse Code: $responseCode\n\n"
-                                } else if (responseCode in 200..299 && settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
-                                    "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
-                                } else {
-                                    "There was an error sending the ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
-                                }
-
-                            showPopup.value = true
-                        }
-                    }
+            LaunchedEffect(showFocusCircle.value) {
+                if (showFocusCircle.value) {
+                    delay(500)
+                    showFocusCircle.value = false
                 }
             }
 
+            focusPoint.value?.let {
+                val alpha by animateFloatAsState(
+                    targetValue = if (showFocusCircle.value) 1f else 0f,
+                    animationSpec = tween(durationMillis = 500),
+                    label = "Float Animation"
+                )
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawCircle(
+                        color = Color.White,
+                        center = Offset(it.x, it.y),
+                        radius = 50f,
+                        style = Stroke(width = 2.dp.toPx()),
+                        alpha = alpha
+                    )
+                }
+            }
+
+
+            qrCodeData.value?.let {
+                val qrCodeDataMap = qrCodeViews.handleQRCodeData(
+                    qrCodeData = it, settingsViewModel = settingsViewModel
+                )
+                titleText.value = qrCodeDataMap["titleText"]?.value as String
+                bodyText.value = qrCodeDataMap["bodyText"]?.value as String
+                showPopup.value = qrCodeDataMap["showPopup"]?.value as Boolean
+                titleColor.value = qrCodeDataMap["titleColor"]?.value as Color
+                success.value = qrCodeDataMap["success"]?.value as Boolean
+            }
+
             if (showPopup.value) {
-                QRCodeViews().ShowQRCodeDataPopup(
+                qrCodeViews.ShowQRCodeDataPopup(
                     qrCodeData = qrCodeData,
                     context = context,
                     titleText = titleText.value!!,
+                    titleColor = titleColor.value!!,
                     bodyText = bodyText.value!!,
                     showDialog = showPopup,
                     qrCodeBounds = qrCodeBounds,
-                    rebindCamera = cameraBindData.second.value!!
+                    rebindCamera = cameraBindData.second.value!!,
+                    success = success.value
                 )
             }
         }
@@ -259,65 +246,61 @@ class CameraPreviewInitializer(
         val bindCamera = remember { mutableStateOf<(() -> Unit)?>(null) }
         val previewView = remember { mutableStateOf(PreviewView(context)) }
 
-        AndroidView(
-            factory = { ctx ->
-                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-                cameraProviderFuture.addListener({
-                    val cameraProvider = cameraProviderFuture.get()
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.value.surfaceProvider)
-                    }
+        AndroidView(factory = { ctx ->
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.value.surfaceProvider)
+                }
 
-                    val imageAnalysis = ImageAnalysis.Builder().build().also {
-                        it.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
-                            if (isScanning.value) {
-                                imageProxy.close()
-                                return@setAnalyzer
-                            }
-
-                            val result = scanQRCode(imageProxy, scanner)
-
-                            processQRCodeResults(
-                                result = result,
-                                imageProxy = imageProxy,
-                                isScanning = isScanning,
-                                qrCodeData = qrCodeData,
-                                qrCodeBounds = qrCodeBounds,
-                                previewView = previewView.value,
-                                cameraProvider = cameraProvider
-                            )
-
+                val imageAnalysis = ImageAnalysis.Builder().build().also {
+                    it.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
+                        if (isScanning.value) {
                             imageProxy.close()
+                            return@setAnalyzer
                         }
+
+                        val result = scanQRCode(imageProxy, scanner)
+
+                        processQRCodeResults(
+                            result = result,
+                            imageProxy = imageProxy,
+                            isScanning = isScanning,
+                            qrCodeData = qrCodeData,
+                            qrCodeBounds = qrCodeBounds,
+                            previewView = previewView.value,
+                            cameraProvider = cameraProvider
+                        )
+
+                        imageProxy.close()
                     }
+                }
 
-                    val cameraSelector =
-                        CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                            .build()
+                val cameraSelector =
+                    CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                        .build()
 
-                    bindCamera.value = {
-                        try {
-                            cameraProvider.unbindAll()
-                            val camera = cameraProvider.bindToLifecycle(
-                                context as ComponentActivity, cameraSelector, preview, imageAnalysis
-                            )
-                            cameraControl.value = camera.cameraControl
-                            cameraInfo.value = camera.cameraInfo
-                        } catch (exc: Exception) {
-                            Toast.makeText(ctx, R.string.camera_init_error, Toast.LENGTH_SHORT)
-                                .show()
-                        }
+                bindCamera.value = {
+                    try {
+                        cameraProvider.unbindAll()
+                        val camera = cameraProvider.bindToLifecycle(
+                            context as ComponentActivity, cameraSelector, preview, imageAnalysis
+                        )
+                        cameraControl.value = camera.cameraControl
+                        cameraInfo.value = camera.cameraInfo
+                    } catch (exc: Exception) {
+                        Toast.makeText(ctx, R.string.camera_init_error, Toast.LENGTH_SHORT).show()
                     }
+                }
 
-                    bindCamera.value?.invoke()
-                }, ContextCompat.getMainExecutor(ctx))
-                previewView.value
+                bindCamera.value?.invoke()
+            }, ContextCompat.getMainExecutor(ctx))
+            previewView.value
 
-            }, modifier = Modifier.fillMaxSize(),
-            update = { view ->
-                previewView.value = view
-            }
-        )
+        }, modifier = Modifier.fillMaxSize(), update = { view ->
+            previewView.value = view
+        })
 
         return Pair(previewView.value, bindCamera)
     }
@@ -337,8 +320,7 @@ class CameraPreviewInitializer(
                         isFlashOn.value = !isFlashOn.value
                         cameraControl.value?.let {
                             toggleFlash(
-                                cameraControl = it,
-                                isFlashOn = isFlashOn.value
+                                cameraControl = it, isFlashOn = isFlashOn.value
                             )
                         }
                     }, modifier = modifier
@@ -399,8 +381,7 @@ class CameraPreviewInitializer(
                     color = Color.Red,
                     topLeft = Offset(bounds.left.toFloat(), bounds.top.toFloat()),
                     size = Size(
-                        bounds.width().toFloat(),
-                        bounds.height().toFloat()
+                        bounds.width().toFloat(), bounds.height().toFloat()
                     ), // Use the actual width of the bounding box
                     style = Stroke(width = 3.dp.toPx())
                 )
@@ -422,9 +403,7 @@ class CameraPreviewInitializer(
     }
 
     private fun getBoundingBox(
-        resultPoints: Array<ResultPoint>?,
-        imageProxy: ImageProxy,
-        previewView: PreviewView
+        resultPoints: Array<ResultPoint>?, imageProxy: ImageProxy, previewView: PreviewView
     ): Rect? {
         // Check if resultPoints is null or has less than 4 points
 

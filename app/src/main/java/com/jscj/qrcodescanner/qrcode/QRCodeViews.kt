@@ -13,7 +13,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -22,6 +25,10 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.jscj.qrcodescanner.R
+import com.jscj.qrcodescanner.http.HttpProcessing
+import com.jscj.qrcodescanner.settings.SettingsEnums
+import com.jscj.qrcodescanner.settings.SettingsViewModel
+import com.jscj.qrcodescanner.util.Constants
 import com.jscj.qrcodescanner.util.Helper
 
 class QRCodeViews {
@@ -35,13 +42,16 @@ class QRCodeViews {
         qrCodeData: MutableState<String?>,
         context: Context,
         titleText: String,
+        titleColor: Color,
         bodyText: String,
         showDialog: MutableState<Boolean>,
         qrCodeBounds: MutableState<Rect?>,
         rebindCamera: () -> Unit,
+        success: Boolean
     ) {
         if (dialogsShown == 0) {
-            Helper.playSound(context, com.google.zxing.client.android.R.raw.zxing_beep)
+            val soundToPlay = if (success) Constants.QR_CODE_BEEP else Constants.ERROR_BEEP
+            Helper.playSound(context, soundToPlay)
         }
 
         if (showDialog.value) {
@@ -55,7 +65,7 @@ class QRCodeViews {
                     dialogsShown = 0
                 },
                 title = {
-                    Text(titleText)
+                    Text(text = titleText, color = titleColor)
                 },
                 text = {
                     // Check if bodyText contains a URL
@@ -85,6 +95,22 @@ class QRCodeViews {
                                 start = startIndex,
                                 end = endIndex
                             )
+
+                            addStyle(
+                                style = SpanStyle(
+                                    color = MaterialTheme.colorScheme.primary
+                                ),
+                                start = 0,
+                                end = startIndex
+                            )
+
+                            addStyle(
+                                style = SpanStyle(
+                                    color = MaterialTheme.colorScheme.primary
+                                ),
+                                start = endIndex,
+                                end = bodyText.length
+                            )
                         }
                         ClickableText(
                             text = annotatedText,
@@ -99,7 +125,10 @@ class QRCodeViews {
                             }
                         )
                     } else {
-                        Text(bodyText) // Set normal text color
+                        Text(
+                            text = bodyText,
+                            color = MaterialTheme.colorScheme.primary
+                        ) // Set normal text color
                     }
                 },
                 confirmButton = {
@@ -123,6 +152,80 @@ class QRCodeViews {
                     )
             )
         }
+    }
+
+    @Composable
+    fun handleQRCodeData(
+        qrCodeData: String,
+        settingsViewModel: SettingsViewModel
+    ): MutableMap<String, MutableState<*>> {
+        val titleText: MutableState<String> = remember { mutableStateOf("") }
+        val bodyText: MutableState<String?> = remember { mutableStateOf("") }
+        val showPopup: MutableState<Boolean> = remember { mutableStateOf(false) }
+        val defaultColor: Color = MaterialTheme.colorScheme.primary
+        val titleColor: MutableState<Color> = remember { mutableStateOf(defaultColor) }
+        val success: MutableState<Boolean> = remember { mutableStateOf(false) }
+
+        settingsViewModel.getCurrentMode().value.let { mode ->
+            if (mode == SettingsEnums.READ_MODE) {
+                titleText.value = "Scanned QR Code"
+                bodyText.value = qrCodeData
+                showPopup.value = true
+                success.value = true
+            } else if (mode == SettingsEnums.HTTP_MODE) {
+                LaunchedEffect(qrCodeData) {
+                    val result: Pair<Int, String?> = try {
+                        HttpProcessing.processHttp(
+                            settings = settingsViewModel,
+                            qrCodeData = qrCodeData
+                        )
+                    } catch (e: Exception) {
+                        Pair(-1, e.message)
+                    }
+
+                    val responseCode = result.first
+                    val responseBody = result.second
+
+                    if (responseCode in 200..299) {
+                        titleText.value =
+                            "${settingsViewModel.getSelectedHttpMethod().value} Request Successful"
+                        titleColor.value = Color.Green
+                        success.value = true
+                    } else {
+                        titleText.value =
+                            "Error - ${settingsViewModel.getSelectedHttpMethod().value} Request Failed"
+                        titleColor.value = Color.Red
+                        success.value = false
+                    }
+
+
+
+                    bodyText.value =
+                        if (responseCode in 200..299 && settingsViewModel.getRequestType().value == SettingsEnums.CONCATENATE) {
+                            "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${
+                                settingsViewModel.getUrl().value.plus(
+                                    qrCodeData
+                                )
+                            }\n\nResponse Code: $responseCode\n\n"
+                        } else if (responseCode in 200..299 && settingsViewModel.getRequestType().value == SettingsEnums.BODY_REQUEST) {
+                            "Successfully sent ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
+                        } else {
+                            "There was an error sending the ${settingsViewModel.getSelectedHttpMethod().value} request to ${settingsViewModel.getUrl().value}\n\nResponse Code: $responseCode\n\nResponse Body: $responseBody"
+                        }
+
+                    showPopup.value = true
+                }
+            }
+        }
+
+        // Return hash map of title and body text
+        return mutableMapOf(
+            "titleText" to titleText,
+            "bodyText" to bodyText,
+            "showPopup" to showPopup,
+            "titleColor" to titleColor,
+            "success" to success
+        )
     }
 
 }
