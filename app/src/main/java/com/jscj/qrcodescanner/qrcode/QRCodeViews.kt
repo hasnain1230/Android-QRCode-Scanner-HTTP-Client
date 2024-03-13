@@ -98,7 +98,7 @@ class QRCodeViews {
 
                             addStyle(
                                 style = SpanStyle(
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onBackground
                                 ),
                                 start = 0,
                                 end = startIndex
@@ -106,7 +106,7 @@ class QRCodeViews {
 
                             addStyle(
                                 style = SpanStyle(
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onBackground
                                 ),
                                 start = endIndex,
                                 end = bodyText.length
@@ -127,7 +127,7 @@ class QRCodeViews {
                     } else {
                         Text(
                             text = bodyText,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onBackground
                         ) // Set normal text color
                     }
                 },
@@ -162,7 +162,7 @@ class QRCodeViews {
         val titleText: MutableState<String> = remember { mutableStateOf("") }
         val bodyText: MutableState<String?> = remember { mutableStateOf("") }
         val showPopup: MutableState<Boolean> = remember { mutableStateOf(false) }
-        val defaultColor: Color = MaterialTheme.colorScheme.primary
+        val defaultColor: Color = MaterialTheme.colorScheme.onBackground
         val titleColor: MutableState<Color> = remember { mutableStateOf(defaultColor) }
         val success: MutableState<Boolean> = remember { mutableStateOf(false) }
 

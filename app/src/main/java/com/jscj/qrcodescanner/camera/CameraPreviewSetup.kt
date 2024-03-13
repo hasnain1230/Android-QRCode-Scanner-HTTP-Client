@@ -127,7 +127,7 @@ class CameraPreviewInitializer(
             TranslucentBackground(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(Color.Black.copy(alpha = 0.65f))
+                    .background(Color.Black.copy(alpha = Constants.TRANSLUCENT_BACKGROUND))
             )
 
             FlashButton(
