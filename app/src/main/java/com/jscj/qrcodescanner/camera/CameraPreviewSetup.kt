@@ -254,7 +254,10 @@ class CameraPreviewInitializer(
                     it.setSurfaceProvider(previewView.value.surfaceProvider)
                 }
 
-                val imageAnalysis = ImageAnalysis.Builder().build().also {
+                val imageAnalysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .setOutputImageRotationEnabled(false)
+                    .build().also {
                     it.setAnalyzer(ContextCompat.getMainExecutor(ctx)) { imageProxy ->
                         if (isScanning.value) {
                             imageProxy.close()
@@ -445,6 +448,7 @@ class CameraPreviewInitializer(
         cameraProvider: ProcessCameraProvider
     ) {
         if (result != null) {
+
             isScanning.value = true
 
             println("QR Code Data: ${result.text}")
