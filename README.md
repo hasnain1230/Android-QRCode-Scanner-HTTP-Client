@@ -1,8 +1,8 @@
-# JSCJ QR Code Scanner + HTTP Client
+# QR Code Scanner + HTTP Client
 
 ![[Cropped] - JSCJ_QR_Code_Logo.png](README/Cropped_-_JSCJ_QR_Code_Logo.png)
 
-This is a QR code scanner that I made for a Sunday School that I volunteer at. We ran into a technical problem where we needed to take data from QR codes, and send HTTP requests using the data that was scanned. There wasn’t a reliable solution on the Google Playstore that matched our needs, so I took the initiative to make a custom application that takes care of this exact purpose.
+This is a QR code scanner that I made for a Sunday School that I volunteer at. This was simply a proof of concept that I made as I work on developing a larger, school wide application built in Flutter (so that it could be cross platform and run on Android and iOS). We ran into a technical problem where we needed to take data from QR codes, and send HTTP requests using the data that was scanned. There wasn’t a reliable solution on the Google Playstore that matched our needs, so I took the initiative to make a custom application that takes care of this exact purpose. While this is a proof of concept, we do use this application every week and it saves us several hours in adminstrative overhead. 
 
 # Requirements
 
