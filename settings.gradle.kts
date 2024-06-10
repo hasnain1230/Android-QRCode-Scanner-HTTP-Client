@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "JSCJ QR Code Scanner"
+rootProject.name = "QR Code Scanner + HTTP Client"
 include(":app")

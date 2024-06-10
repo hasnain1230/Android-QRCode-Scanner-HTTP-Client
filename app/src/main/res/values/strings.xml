@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">JSCJ QR Code Scanner</string>
+    <string name="app_name">QR Code Scanner + HTTP Client</string>
     <string name="permission_request_text">This app needs access to your camera for scanning QR codes.</string>
     <string name="camera_permission_granted">Camera Permission Granted</string>
     <string name="camera_init_error">Camera Initialization Error</string>

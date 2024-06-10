@@ -1,6 +1,6 @@
 # QR Code Scanner + HTTP Client
 
-![[Cropped] - JSCJ_QR_Code_Logo.png](README/Cropped_-_JSCJ_QR_Code_Logo.png)
+![logo.png](README/logo.png)
 
 This is a QR code scanner that I made for a Sunday School that I volunteer at. This was simply a proof of concept that I made as I work on developing a larger, school wide application built in Flutter (so that it could be cross platform and run on Android and iOS). We ran into a technical problem where we needed to take data from QR codes, and send HTTP requests using the data that was scanned. There wasn’t a reliable solution on the Google Playstore that matched our needs, so I took the initiative to make a custom application that takes care of this exact purpose. While this is a proof of concept, we do use this application every week and it saves us several hours in adminstrative overhead. 
 
@@ -35,7 +35,7 @@ This application allows the user to simply scan QR codes as they wish and see th
 
 ## Technologies
 
-JSCJ QR Code Scanner + HTTP Client uses a variety of different technologies including:
+QR Code Scanner + HTTP Client uses a variety of different technologies including:
 
 - Google Vision ML Kit
 - Zebra Crossing by Journey Apps
@@ -140,7 +140,7 @@ Please Note: For all requests other than GET requests, there are two Request Typ
 
     ```json
     {
-    	"text": "Hello World"
+    	"text": "Hello World",
     	"args": ["arg1", "arg2", "arg3"]
     }
     ```
